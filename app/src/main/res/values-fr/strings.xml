@@ -1,0 +1,27 @@
+<resources>
+    <string name="settings">Paramètres</string>
+    <string name="back">Retour</string>
+    <string name="cancel">Annuler</string>
+    <string name="nav_dashboard">Accueil</string>
+    <string name="nav_tools">Outils</string>
+    <string name="nav_emergency">Urgence</string>
+    <string name="nav_settings">Paramètres</string>
+    <string name="app_language">Langue de l\'app</string>
+    <string name="appearance">Apparence</string>
+    <string name="notifications">Notifications</string>
+    <string name="system_default">Par défaut du système</string>
+    <string name="theme_light">Clair</string>
+    <string name="theme_dark">Sombre</string>
+    <string name="upgrade_to_pro">Passer à PetCare Pro</string>
+    <string name="explore_pro">Découvrir Pro</string>
+    <string name="restore_purchases">Restaurer les achats</string>
+    <string name="ask_ai_about">Demander à l\'IA pour %1$s</string>
+    <string name="greeting_morning">Bonjour</string>
+    <string name="greeting_afternoon">Bon après-midi</string>
+    <string name="greeting_evening">Bonsoir</string>
+    <string name="greeting_night">Bonne nuit</string>
+    <string name="pet_needs_you">%1$s a besoin de vous</string>
+    <string name="monthly_pro">Pro mensuel</string>
+    <string name="weekly_pro">Pro hebdomadaire</string>
+    <string name="maybe_later">Plus tard</string>
+</resources>

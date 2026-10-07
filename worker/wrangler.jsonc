@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "pet-companion-ai",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "ai": { "binding": "AI" },
+  "kv_namespaces": [{ "binding": "CONFIG", "id": "7b0f46f3cf6641ce86b1572283022a93" }],
+  "durable_objects": {
+    "bindings": [{ "name": "AI_QUOTA", "class_name": "AiQuotaDO" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["AiQuotaDO"] }],
+  "vars": {
+    "MODEL": "@cf/qwen/qwen3-30b-a3b-fp8",
+    "FREE_DAILY": "5",
+    "LIFETIME_DAILY": "10",
+    "PRO_DAILY": "20",
+    "BONUS_DAILY": "1",
+    "MAX_TOKENS": "500",
+    "PLAY_PACKAGE_NAME": "com.petcares.companionlites",
+    "AI_WEEKLY_SKU": "ai_weekly_pass",
+    "AI_MONTHLY_SKU": "ai_monthly_pass"
+  }
+}

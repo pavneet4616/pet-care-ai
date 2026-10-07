@@ -1,0 +1,19 @@
+<resources>
+    <string name="settings">அமைப்புகள்</string>
+    <string name="nav_dashboard">முகப்பு</string>
+    <string name="nav_tools">கருவிகள்</string>
+    <string name="nav_emergency">அவசரம்</string>
+    <string name="nav_settings">அமைப்புகள்</string>
+    <string name="app_language">ஆப் மொழி</string>
+    <string name="appearance">தோற்றம்</string>
+    <string name="theme_light">வெளிர்</string>
+    <string name="theme_dark">இருள்</string>
+    <string name="upgrade_to_pro">PetCare Pro பெறுக</string>
+    <string name="ask_ai_about">%1$s பற்றி AI-யிடம் கேளுங்கள்</string>
+    <string name="greeting_morning">காலை வணக்கம்</string>
+    <string name="greeting_afternoon">மதிய வணக்கம்</string>
+    <string name="greeting_evening">மாலை வணக்கம்</string>
+    <string name="greeting_night">இரவு வணக்கம்</string>
+    <string name="pet_needs_you">%1$s-க்கு நீங்கள் தேவை</string>
+    <string name="maybe_later">பிறகு</string>
+</resources>
