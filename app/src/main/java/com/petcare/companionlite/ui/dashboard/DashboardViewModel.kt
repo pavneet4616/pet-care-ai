@@ -1,5 +1,9 @@
 package com.petcare.companionlite.ui.dashboard
 
+import com.petcare.companionlite.core.inAppLanguage
+
+import com.petcare.companionlite.R
+
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -134,10 +138,12 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 val pet = uiState.value.pets.firstOrNull { it.pet.id == petId }
                 val petName = pet?.pet?.name ?: "Your pet"
                 val newStreak = (pet?.streakDays ?: 0)
+                app.container.diagnostics.event("care_logged",taskType.name)
+                if (newStreak >= 7) app.container.reviewPrompter.positiveMoment()
                 val pendingAfter = (pet?.pendingCount ?: 1) + (pet?.overdueCount ?: 0) - 1
                 _celebrationState.value = CelebrationData(
                     show = true,
-                    message = "${petName} is happy! ❤️",
+                    message = app.inAppLanguage().getString(R.string.ui_63e1851b37, petName),
                     petName = petName,
                     streakDays = newStreak,
                     allDone = pendingAfter <= 0,
@@ -160,7 +166,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             val petName = pet?.pet?.name ?: "Your pet"
             _celebrationState.value = CelebrationData(
                 show = true,
-                message = "${petName} is hydrated! 💧",
+                message = app.inAppLanguage().getString(R.string.ui_70ec4a9dff, petName),
                 petName = petName,
                 streakDays = pet?.streakDays ?: 0,
                 allDone = false,

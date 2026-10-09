@@ -1,6 +1,7 @@
 package com.petcare.companionlite.ui.stats
 
 import android.app.Application
+import com.petcare.companionlite.core.inAppLanguage
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
@@ -63,7 +64,7 @@ class StatsViewModel(
         if (first == 0.0) return null
         val change = ((last - first) / first) * 100
         return if (kotlin.math.abs(change) >= 10) {
-            "⚠️ Rapid weight change detected: ${"%.1f".format(change)}%"
+            app.inAppLanguage().getString(com.petcare.companionlite.R.string.weight_change_label, "%.1f".format(change))
         } else {
             null
         }

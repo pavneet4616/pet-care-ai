@@ -5,7 +5,7 @@ export function quotaStub(env: Env, installationId: string): string {
   return id.toString();
 }
 
-async function callDo(env: Env, installationId: string, path: string, body?: unknown): Promise<Response> {
+export async function callDo(env: Env, installationId: string, path: string, body?: unknown): Promise<Response> {
   const stub = env.AI_QUOTA.get(env.AI_QUOTA.idFromName(`install:${installationId}`));
   return stub.fetch(`https://quota${path}`, {
     method: body === undefined ? "GET" : "POST",
@@ -43,8 +43,10 @@ export async function doSetEntitlement(
   installationId: string,
   tier: "free" | "lifetime" | "pro",
   proExpiry?: number,
+  source?: {tokenHash?: string; expectedTokenHash?: string; lifetime?: boolean},
 ): Promise<void> {
-  await callDo(env, installationId, "/set-entitlement", { tier, proExpiry });
+  const response=await callDo(env, installationId, "/set-entitlement", { tier, proExpiry, ...source });
+  if (!response.ok) throw new Error("Entitlement persistence failed");
 }
 
 export async function doReport(

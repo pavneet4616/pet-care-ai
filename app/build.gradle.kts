@@ -4,6 +4,8 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
+    id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
 }
 
 val signingProperties = Properties().apply {
@@ -35,8 +37,8 @@ android {
         applicationId = "com.petcares.companionlites"
         minSdk = 26
         targetSdk = 36
-        versionCode = 10
-        versionName = "1.1.0"
+        versionCode = 11
+        versionName = "1.1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -72,6 +74,8 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    bundle { language { enableSplit = false } }
+
     buildFeatures {
         compose = true
         buildConfig = true
@@ -90,7 +94,8 @@ ksp {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2024.09.03")
+    // Compose 1.9 fits the existing API 36 / AGP 9 toolchain.
+    val composeBom = platform("androidx.compose:compose-bom:2025.08.01")
 
     implementation(composeBom)
     androidTestImplementation(composeBom)
@@ -120,9 +125,16 @@ dependencies {
 
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("com.airbnb.android:lottie-compose:6.5.2")
-    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
-    implementation("com.google.android.gms:play-services-ads:23.4.0")
+    implementation("com.google.android.gms:play-services-ads:25.5.0")
     implementation("com.google.android.ump:user-messaging-platform:4.0.0")
     implementation("com.android.billingclient:billing-ktx:9.1.0")
+    implementation("com.google.android.play:integrity:1.6.0")
+    implementation("com.google.android.play:review-ktx:2.0.2")
+    implementation(platform("com.google.firebase:firebase-bom:34.19.0"))
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-crashlytics")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.xerial:sqlite-jdbc:3.51.2.0")
+    testImplementation("org.json:json:20240303")
 }

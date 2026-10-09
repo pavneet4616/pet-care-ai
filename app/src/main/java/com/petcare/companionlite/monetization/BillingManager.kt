@@ -1,5 +1,7 @@
 package com.petcare.companionlite.monetization
 
+import com.petcare.companionlite.core.inAppLanguage
+
 import android.app.Activity
 import android.content.Context
 import android.os.Handler
@@ -26,6 +28,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 
 data class StoreProduct(
@@ -53,6 +58,7 @@ class BillingManager(
     private val mainHandler = Handler(Looper.getMainLooper())
     private val _uiState = MutableStateFlow(BillingUiState())
     private val productDetailsById = ConcurrentHashMap<String, ProductDetails>()
+    private var purchaseFlowInProgress = false
 
     val uiState: StateFlow<BillingUiState> = _uiState.asStateFlow()
 
@@ -82,7 +88,7 @@ class BillingManager(
                     it.copy(
                         isReady = false,
                         isLoading = false,
-                        message = "Play Billing disconnected. We'll retry when the app resumes.",
+                        message = appContext.inAppLanguage().getString(R.string.ui_c29ae41e17),
                     )
                 }
             }
@@ -98,7 +104,7 @@ class BillingManager(
                         it.copy(
                             isReady = false,
                             isLoading = false,
-                            message = "Could not connect to Google Play billing right now.",
+                            message = appContext.inAppLanguage().getString(R.string.ui_63a02de04c),
                         )
                     }
                 }
@@ -122,9 +128,15 @@ class BillingManager(
             return
         }
 
+        if (productId !in activeSubscriptionIds) {
+            _uiState.update { it.copy(message = appContext.inAppLanguage().getString(R.string.ui_4e728e6c43)) }
+            return
+        }
+        if (purchaseFlowInProgress) return
+
         if (!billingClient.isReady) {
             startConnection()
-            _uiState.update { it.copy(message = "Store is still connecting. Try again in a moment.") }
+            _uiState.update { it.copy(message = appContext.inAppLanguage().getString(R.string.ui_0c08d00176)) }
             return
         }
 
@@ -134,7 +146,7 @@ class BillingManager(
             queryProducts()
             _uiState.update {
                 it.copy(
-                    message = "This Play product isn’t available yet. Open the app from Google Play, then try again.",
+                    message = appContext.inAppLanguage().getString(R.string.ui_323d4f329e),
                 )
             }
             return
@@ -145,32 +157,69 @@ class BillingManager(
         } catch (error: Exception) {
             Log.e(TAG, "Could not build billing params for $productId", error)
             _uiState.update {
-                it.copy(message = "Purchase could not start: ${error.message ?: "invalid offer"}")
+                it.copy(message = appContext.inAppLanguage().getString(R.string.billing_offer_unavailable))
             }
             return
         }
 
-        val result = try {
-            billingClient.launchBillingFlow(
-                activity,
-                BillingFlowParams.newBuilder()
-                    .setProductDetailsParamsList(listOf(params))
-                    .build(),
-            )
-        } catch (error: Exception) {
-            Log.e(TAG, "launchBillingFlow crashed for $productId", error)
-            _uiState.update {
-                it.copy(message = "Purchase could not start: ${error.message ?: "Play Billing error"}")
-            }
-            return
-        }
-
-        Log.i(TAG, "launchBillingFlow $productId -> ${result.responseCode} ${result.debugMessage}")
-        if (result.responseCode != BillingClient.BillingResponseCode.OK) {
-            _uiState.update {
-                it.copy(
-                    message = "Purchase could not start: ${result.debugMessage.ifBlank { "error ${result.responseCode}" }}",
-                )
+        purchaseFlowInProgress = true
+        scope.launch(Dispatchers.Main) {
+            var launched = false
+            try {
+                // Query Play immediately before checkout; cached flags can be stale.
+                val (queryResult, purchases) = suspendCancellableCoroutine<Pair<BillingResult, List<Purchase>>> { continuation ->
+                    billingClient.queryPurchasesAsync(
+                        QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build(),
+                    ) { result, owned ->
+                        if (continuation.isActive) continuation.resume(result to owned.toList())
+                    }
+                }
+                if (queryResult.responseCode != BillingClient.BillingResponseCode.OK) {
+                    _uiState.update { it.copy(message = appContext.inAppLanguage().getString(R.string.ui_add2a4feb7)) }
+                    return@launch
+                }
+                val checkout = subscriptionCheckout(productId, activeSubscriptionIds, purchases.map { purchase ->
+                    OwnedSubscription(
+                        purchase.products, purchase.purchaseToken,
+                        purchased = purchase.purchaseState == Purchase.PurchaseState.PURCHASED,
+                        pending = purchase.purchaseState == Purchase.PurchaseState.PENDING,
+                    )
+                })
+                val blockedMessage = when (checkout) {
+                    SubscriptionCheckout.Pending -> appContext.inAppLanguage().getString(R.string.billing_pending)
+                    SubscriptionCheckout.MultipleActive -> appContext.inAppLanguage().getString(R.string.billing_multiple)
+                    SubscriptionCheckout.AlreadyActive -> appContext.inAppLanguage().getString(R.string.billing_already_active)
+                    SubscriptionCheckout.Unsupported -> appContext.inAppLanguage().getString(R.string.billing_supported_plans)
+                    else -> null
+                }
+                if (blockedMessage != null) {
+                    _uiState.update { it.copy(message = blockedMessage) }
+                    return@launch
+                }
+                val installationId = settingsStore.getOrCreateInstallationId()
+                val accountId = MessageDigest.getInstance("SHA-256")
+                    .digest(installationId.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
+                val flow = BillingFlowParams.newBuilder()
+                    .setProductDetailsParamsList(listOf(if (checkout is SubscriptionCheckout.Replace) productDetailsParams(productDetails,checkout.oldProductId) else params))
+                    .setObfuscatedAccountId(accountId)
+                if (checkout is SubscriptionCheckout.Replace) {
+                    flow.setSubscriptionUpdateParams(
+                        BillingFlowParams.SubscriptionUpdateParams.newBuilder()
+                            .setOldPurchaseToken(checkout.oldToken)
+                            .build(),
+                    )
+                }
+                if (activity.isFinishing || activity.isDestroyed) return@launch
+                val result = billingClient.launchBillingFlow(activity, flow.build())
+                launched = result.responseCode == BillingClient.BillingResponseCode.OK
+                if (!launched) {
+                    _uiState.update { it.copy(message = appContext.inAppLanguage().getString(R.string.ui_3bae8a8178, result.debugMessage)) }
+                }
+            } catch (error: Exception) {
+                Log.e(TAG, "Purchase launch failed", error)
+                _uiState.update { it.copy(message = appContext.inAppLanguage().getString(R.string.ui_473a9ef576)) }
+            } finally {
+                if (!launched) purchaseFlowInProgress = false
             }
         }
     }
@@ -183,11 +232,12 @@ class BillingManager(
         billingResult: BillingResult,
         purchases: MutableList<Purchase>?,
     ) {
+        purchaseFlowInProgress = false
         Log.i(TAG, "onPurchasesUpdated ${billingResult.responseCode} count=${purchases?.size ?: 0}")
         when (billingResult.responseCode) {
             BillingClient.BillingResponseCode.OK -> {
                 if (purchases.isNullOrEmpty()) {
-                    _uiState.update { it.copy(message = "Purchase completed but no items were returned.") }
+                    _uiState.update { it.copy(message = appContext.inAppLanguage().getString(R.string.ui_aa559fff3b)) }
                 } else {
                     handlePurchases(purchases)
                     // Refresh canonical Play lists so reconcile grants immediately.
@@ -195,11 +245,11 @@ class BillingManager(
                 }
             }
             BillingClient.BillingResponseCode.USER_CANCELED -> {
-                _uiState.update { it.copy(message = "Purchase cancelled.") }
+                _uiState.update { it.copy(message = appContext.inAppLanguage().getString(R.string.ui_1eb379e30a)) }
             }
             else -> {
                 _uiState.update {
-                    it.copy(message = "Purchase failed: ${billingResult.debugMessage.orEmpty()}")
+                    it.copy(message = appContext.inAppLanguage().getString(R.string.ui_884960b553, billingResult.debugMessage.orEmpty()))
                 }
             }
         }
@@ -209,10 +259,16 @@ class BillingManager(
         _uiState.update { it.copy(message = null) }
     }
 
-    private fun productDetailsParams(productDetails: ProductDetails): BillingFlowParams.ProductDetailsParams {
+    private fun productDetailsParams(productDetails: ProductDetails, oldProductId: String? = null): BillingFlowParams.ProductDetailsParams {
         val offerToken = offerTokenFor(productDetails)
         val builder = BillingFlowParams.ProductDetailsParams.newBuilder()
             .setProductDetails(productDetails)
+        if (oldProductId != null) builder.setSubscriptionProductReplacementParams(
+            BillingFlowParams.ProductDetailsParams.SubscriptionProductReplacementParams.newBuilder()
+                .setOldProductId(oldProductId)
+                .setReplacementMode(BillingFlowParams.ProductDetailsParams.SubscriptionProductReplacementParams.ReplacementMode.WITH_TIME_PRORATION)
+                .build(),
+        )
         if (offerToken != null) {
             builder.setOfferToken(offerToken)
         } else if (productDetails.productType == BillingClient.ProductType.SUBS) {
@@ -222,7 +278,10 @@ class BillingManager(
     }
 
     private fun offerTokenFor(productDetails: ProductDetails): String? {
-        val offers = productDetails.subscriptionOfferDetails.orEmpty()
+        val expectedPeriod = if (productDetails.productId == aiWeeklyProductId) "P1W" else "P1M"
+        val offers = productDetails.subscriptionOfferDetails.orEmpty().filter {
+            it.pricingPhases.pricingPhaseList.lastOrNull()?.billingPeriod == expectedPeriod
+        }
         if (offers.isEmpty()) {
             val oneTime = productDetails.oneTimePurchaseOfferDetailsList
                 ?.firstOrNull { !it.offerToken.isNullOrBlank() }
@@ -239,41 +298,7 @@ class BillingManager(
 
     private fun queryProducts() {
         if (!billingClient.isReady) return
-        queryInAppProducts()
         querySubscriptionProducts()
-    }
-
-    private fun queryInAppProducts() {
-        val inAppParams = QueryProductDetailsParams.newBuilder()
-            .setProductList(
-                listOf(premiumProductId, removeAdsProductId).map { productId ->
-                    QueryProductDetailsParams.Product.newBuilder()
-                        .setProductId(productId)
-                        .setProductType(BillingClient.ProductType.INAPP)
-                        .build()
-                },
-            )
-            .build()
-
-        billingClient.queryProductDetailsAsync(inAppParams) { result, queryProductDetailsResult ->
-            Log.i(
-                TAG,
-                "INAPP query ${result.responseCode} fetched=${queryProductDetailsResult.productDetailsList.size} " +
-                    "unfetched=${queryProductDetailsResult.unfetchedProductList.map { it.productId }}",
-            )
-            if (result.responseCode == BillingClient.BillingResponseCode.OK) {
-                queryProductDetailsResult.productDetailsList.forEach { detail ->
-                    productDetailsById[detail.productId] = detail
-                }
-            }
-            publishProducts(
-                if (result.responseCode == BillingClient.BillingResponseCode.OK) {
-                    null
-                } else {
-                    "Could not load one-time Play products: ${result.debugMessage}"
-                },
-            )
-        }
     }
 
     private fun querySubscriptionProducts() {
@@ -296,8 +321,11 @@ class BillingManager(
                 "SUBS query ${result.responseCode} ${result.debugMessage} fetched=${fetched.map { it.productId }} unfetched=$unfetched",
             )
             if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                productDetailsById.clear()
                 fetched.forEach { detail ->
-                    productDetailsById[detail.productId] = detail
+                    if (detail.productId in activeSubscriptionIds && offerTokenFor(detail) != null) {
+                        productDetailsById[detail.productId] = detail
+                    }
                     Log.i(
                         TAG,
                         "${detail.productId} offers=${detail.subscriptionOfferDetails?.map { "${it.basePlanId}/${it.offerId}" }}",
@@ -308,9 +336,9 @@ class BillingManager(
                 .filter { !productDetailsById.containsKey(it) }
             val message = when {
                 result.responseCode != BillingClient.BillingResponseCode.OK ->
-                    "Could not load Pro plans from Google Play."
+                    appContext.inAppLanguage().getString(R.string.billing_load_failed)
                 missingSubs.isNotEmpty() ->
-                    "Pro plans aren’t available on this install yet. Use a Play tester account and a build uploaded to Play Console."
+                    appContext.inAppLanguage().getString(R.string.billing_plans_unavailable)
                 else -> null
             }
             publishProducts(message)
@@ -332,12 +360,18 @@ class BillingManager(
     private fun toStoreProduct(detail: ProductDetails): StoreProduct {
         val isSub = detail.subscriptionOfferDetails?.isNotEmpty() == true
         val price = if (isSub) {
-            val offers = detail.subscriptionOfferDetails.orEmpty()
-            val paidPhase = offers
-                .flatMap { it.pricingPhases.pricingPhaseList }
-                .lastOrNull { it.priceAmountMicros > 0 }
-                ?: offers.firstOrNull()?.pricingPhases?.pricingPhaseList?.lastOrNull()
-            paidPhase?.formattedPrice
+            val offer = detail.subscriptionOfferDetails.orEmpty().firstOrNull { it.offerToken == offerTokenFor(detail) }
+            val paidPhase = offer?.pricingPhases?.pricingPhaseList?.lastOrNull()
+            paidPhase?.let { recurring ->
+                val strings = appContext.inAppLanguage()
+                var terms = strings.getString(R.string.plan_recurring_price, recurring.formattedPrice, billingPeriodLabel(recurring.billingPeriod))
+                offer?.pricingPhases?.pricingPhaseList.orEmpty().dropLast(1).asReversed().forEach { phase ->
+                    val period = billingPeriodLabel(phase.billingPeriod,phase.billingCycleCount.coerceAtLeast(1))
+                    terms = if (phase.priceAmountMicros == 0L) strings.getString(R.string.plan_free_period,period,terms)
+                        else strings.getString(R.string.plan_intro_price,phase.formattedPrice,period,terms)
+                }
+                terms
+            }
         } else {
             detail.oneTimePurchaseOfferDetails?.formattedPrice
                 ?: detail.oneTimePurchaseOfferDetailsList?.firstOrNull()?.formattedPrice
@@ -346,8 +380,20 @@ class BillingManager(
             id = detail.productId,
             title = detail.title.substringBefore("(").trim(),
             description = detail.description,
-            priceText = price ?: "Available in Google Play",
+            priceText = price ?: appContext.inAppLanguage().getString(R.string.plan_price_in_play),
         )
+    }
+
+    private fun billingPeriodLabel(period: String, cycles: Int = 1): String {
+        val match = Regex("P(\\d+)([DWMY])").matchEntire(period) ?: return period
+        val count = match.groupValues[1].toInt() * cycles
+        val resource = when(match.groupValues[2]) {
+            "D" -> R.plurals.billing_days
+            "W" -> R.plurals.billing_weeks
+            "M" -> R.plurals.billing_months
+            else -> R.plurals.billing_years
+        }
+        return appContext.inAppLanguage().resources.getQuantityString(resource,count,count)
     }
 
     // Latest Play purchase lists. Local flags are DERIVED from these on every
@@ -359,6 +405,7 @@ class BillingManager(
     @Volatile private var subsBatch: List<Purchase> = emptyList()
     private val purchaseQueryGen = java.util.concurrent.atomic.AtomicInteger(0)
     @Volatile private var pendingManualRestore = false
+    var onOwnedPurchasesReady: (() -> Unit)? = null
     private val verifyingTokens = ConcurrentHashMap.newKeySet<String>()
 
     private fun queryPurchases() {
@@ -368,6 +415,7 @@ class BillingManager(
             .setProductType(BillingClient.ProductType.INAPP)
             .build()
         billingClient.queryPurchasesAsync(inAppParams) { result, purchases ->
+            if (purchaseQueryGen.get() != gen) return@queryPurchasesAsync
             if (result.responseCode == BillingClient.BillingResponseCode.OK) {
                 inAppBatch = purchases.toList()
                 inAppBatchGen = gen
@@ -379,6 +427,7 @@ class BillingManager(
             .setProductType(BillingClient.ProductType.SUBS)
             .build()
         billingClient.queryPurchasesAsync(subParams) { result, purchases ->
+            if (purchaseQueryGen.get() != gen) return@queryPurchasesAsync
             if (result.responseCode == BillingClient.BillingResponseCode.OK) {
                 subsBatch = purchases.toList()
                 subsBatchGen = gen
@@ -392,48 +441,30 @@ class BillingManager(
      * so a half-answered refresh can never briefly revoke Pro. */
     private fun tryReconcile(gen: Int) {
         if (inAppBatchGen != gen || subsBatchGen != gen) return
-        val all = inAppBatch + subsBatch
-        val active = all.filter { it.purchaseState == Purchase.PurchaseState.PURCHASED }
-        val products = active.flatMap { it.products }.toSet()
-        val hasAi = products.contains(aiWeeklyProductId) || products.contains(aiMonthlyProductId)
-        val hasPremium = products.contains(premiumProductId)
-        val hasRemoveAds = products.contains(removeAdsProductId)
+        val owned = billingEntitlements((inAppBatch + subsBatch).map {
+            OwnedSubscription(it.products, it.purchaseToken,
+                it.purchaseState == Purchase.PurchaseState.PURCHASED,
+                it.purchaseState == Purchase.PurchaseState.PENDING)
+        })
+        val hasAi = owned.subscription != null
+        val hasPremium = owned.lifetimeToken != null
+        val hasRemoveAds = owned.adsRemoved
         val manualRestore = pendingManualRestore
         pendingManualRestore = false
-        Log.i(
-            TAG,
-            "Reconcile gen=$gen active=$products hasAi=$hasAi premium=$hasPremium noAds=$hasRemoveAds",
-        )
         scope.launch {
-            if (hasAi) {
-                val aiPurchase = active.firstOrNull { purchase ->
-                    purchase.products.contains(aiWeeklyProductId) ||
-                        purchase.products.contains(aiMonthlyProductId)
-                }
-                val sku = when {
-                    aiPurchase?.products?.contains(aiMonthlyProductId) == true -> aiMonthlyProductId
-                    else -> aiWeeklyProductId
-                }
-                if (aiPurchase != null) {
-                    settingsStore.setAiPurchase(aiPurchase.purchaseToken, sku)
-                }
-                // Preserve server expiry; verify refreshes it when it answers.
-                val expiry = settingsStore.getAiProExpiry()
-                settingsStore.setAiWeeklyPro(true, expiry)
-                // AI Pro includes every premium feature + no ads while active.
-                settingsStore.setPremium(true)
-                settingsStore.setAdsRemoved(true)
-            } else {
-                settingsStore.clearAiPurchase()
-                settingsStore.setAiWeeklyPro(false, 0L)
-                settingsStore.setPremium(hasPremium)
-                settingsStore.setAdsRemoved(hasRemoveAds)
+            settingsStore.applyBillingSnapshot(owned) { purchaseQueryGen.get() == gen }
+            if (purchaseQueryGen.get() != gen) return@launch
+            // Verify only after the canonical tokens are stored, including lifetime restores.
+            owned.subscription?.let { subscription ->
+                (inAppBatch + subsBatch).firstOrNull { it.purchaseToken == subscription.token }
+                    ?.let { verifyAiServerIfNeeded(it) }
             }
+            onOwnedPurchasesReady?.invoke()
             if (manualRestore) {
                 val text = if (hasAi || hasPremium || hasRemoveAds) {
-                    appContext.getString(R.string.purchases_restored)
+                    appContext.inAppLanguage().getString(R.string.purchases_restored)
                 } else {
-                    appContext.getString(R.string.no_purchases_found)
+                    appContext.inAppLanguage().getString(R.string.no_purchases_found)
                 }
                 _uiState.update { it.copy(message = text) }
             }
@@ -445,7 +476,7 @@ class BillingManager(
             when (purchase.purchaseState) {
                 Purchase.PurchaseState.PENDING -> {
                     _uiState.update {
-                        it.copy(message = "Purchase pending. We'll unlock it automatically when Google Play confirms payment.")
+                        it.copy(message = appContext.inAppLanguage().getString(R.string.ui_672d825998))
                     }
                 }
                 Purchase.PurchaseState.PURCHASED -> {
@@ -453,7 +484,7 @@ class BillingManager(
                         // Already acknowledged (e.g. app restart/resume): the old code
                         // stopped here and NEVER ran server verification, leaving the
                         // server quota on free tier. Always verify AI subs.
-                        verifyAiServerIfNeeded(purchase)
+                        // Canonical reconciliation schedules verification after token storage.
                     } else {
                         acknowledge(purchase)
                     }
@@ -470,14 +501,13 @@ class BillingManager(
         billingClient.acknowledgePurchase(params) { result ->
             if (result.responseCode == BillingClient.BillingResponseCode.OK) {
                 Log.i(TAG, "Acknowledged ${purchase.products}")
-                verifyAiServerIfNeeded(purchase)
                 // Refresh canonical lists so reconcile grants immediately.
                 queryPurchases()
-                _uiState.update { it.copy(message = appContext.getString(R.string.purchase_unlocked)) }
+                _uiState.update { it.copy(message = appContext.inAppLanguage().getString(R.string.purchase_unlocked)) }
             } else {
                 Log.w(TAG, "Acknowledge failed: ${result.responseCode} ${result.debugMessage}")
                 _uiState.update {
-                    it.copy(message = "Purchase received but acknowledgement failed. Please retry opening the app.")
+                    it.copy(message = appContext.inAppLanguage().getString(R.string.ui_6e4975afd1))
                 }
             }
         }
@@ -491,9 +521,6 @@ class BillingManager(
             purchase.products.contains(aiWeeklyProductId) -> aiWeeklyProductId
             purchase.products.contains(aiMonthlyProductId) -> aiMonthlyProductId
             else -> return
-        }
-        scope.launch {
-            settingsStore.setAiPurchase(purchase.purchaseToken, subId)
         }
         if (!verifyingTokens.add(purchase.purchaseToken)) return
         scope.launch {
@@ -515,6 +542,7 @@ class BillingManager(
         const val removeAdsProductId = "remove_ads"
         const val aiWeeklyProductId = "ai_weekly_pass"
         const val aiMonthlyProductId = "ai_monthly_pass"
+        val activeSubscriptionIds = setOf(aiWeeklyProductId, aiMonthlyProductId)
     }
 
     var onAiWeeklyPurchased: ((purchaseToken: String, subscriptionId: String) -> Unit)? = null

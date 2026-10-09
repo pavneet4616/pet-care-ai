@@ -5,11 +5,13 @@
   "compatibility_date": "2026-09-01",
   "compatibility_flags": ["nodejs_compat"],
   "ai": { "binding": "AI" },
+  "ratelimits": [{ "name": "API_RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 60, "period": 60 } }],
+  "observability": { "enabled": true },
   "kv_namespaces": [{ "binding": "CONFIG", "id": "7b0f46f3cf6641ce86b1572283022a93" }],
   "durable_objects": {
-    "bindings": [{ "name": "AI_QUOTA", "class_name": "AiQuotaDO" }]
+    "bindings": [{ "name": "AI_QUOTA", "class_name": "AiQuotaDO" }, { "name": "SECURITY_REGISTRY", "class_name": "RegistryDO" }]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["AiQuotaDO"] }],
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["AiQuotaDO"] }, { "tag": "v2", "new_sqlite_classes": ["RegistryDO"] }],
   "vars": {
     "MODEL": "@cf/qwen/qwen3-30b-a3b-fp8",
     "FREE_DAILY": "5",
@@ -19,6 +21,15 @@
     "MAX_TOKENS": "500",
     "PLAY_PACKAGE_NAME": "com.petcares.companionlites",
     "AI_WEEKLY_SKU": "ai_weekly_pass",
-    "AI_MONTHLY_SKU": "ai_monthly_pass"
+    "AI_MONTHLY_SKU": "ai_monthly_pass",
+    "PLAY_CLOUD_PROJECT_NUMBER": "138551758971",
+    "PLAY_SIGNING_DIGESTS": "rRklt_7HaC1LeOQcYfIO6DB2bpVBMQiJV2jjxgTVql4",
+    "ADMOB_REWARDED_UNIT": "3416986503",
+    "RTDN_SERVICE_ACCOUNT_EMAIL": "pet-companion@ai-pdf-chat-497609.iam.gserviceaccount.com",
+    "RTDN_AUDIENCE": "https://pet-companion-ai.neetpav46.workers.dev/v1/billing/google/rtdn",
+    "INTEGRITY_MODE": "enforce",
+    "INTEGRITY_MIN_VERSION_CODE": "11",
+    "LEGACY_IP_DAILY_LIMIT": "25",
+    "LEGACY_GLOBAL_DAILY_LIMIT": "500"
   }
 }

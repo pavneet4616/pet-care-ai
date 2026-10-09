@@ -1,0 +1,34 @@
+<resources>
+    <string name="settings">Definições</string>
+    <string name="back">Voltar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="nav_dashboard">Início</string>
+    <string name="nav_tools">Ferramentas</string>
+    <string name="nav_emergency">Emergência</string>
+    <string name="nav_settings">Definições</string>
+    <string name="app_language">Idioma da app</string>
+    <string name="appearance">Aparência</string>
+    <string name="theme_light">Claro</string>
+    <string name="theme_dark">Escuro</string>
+    <string name="upgrade_to_pro">Atualizar para PetCare Pro</string>
+    <string name="explore_pro">Ver Pro</string>
+    <string name="restore_purchases">Restaurar compras</string>
+    <string name="ask_ai_about">Perguntar à IA sobre %1$s</string>
+    <string name="greeting_morning">Bom dia</string>
+    <string name="greeting_afternoon">Boa tarde</string>
+    <string name="greeting_evening">Boa tarde</string>
+    <string name="greeting_night">Boa noite</string>
+    <string name="pet_needs_you">%1$s precisa de si</string>
+    <string name="monthly_pro">Pro mensal</string>
+    <string name="weekly_pro">Pro semanal</string>
+    <string name="maybe_later">Mais tarde</string>
+    <string name="privacy_choices">Privacidade dos anúncios</string>
+    <string name="pro_access_active">Acesso Pro ativo</string>
+    <string name="cancel_in_play">As assinaturas são renovadas automaticamente. Cancele a qualquer momento no Google Play.</string>
+    <string name="care_reminder_title">Lembrete de cuidados para %1$s</string>
+    <string name="care_reminder_body">Tarefa de cuidado: %1$s. Toque para abrir o registro de cuidados do seu animal.</string>
+    <string name="care_feed">alimentação</string>
+    <string name="care_walk">passeio</string>
+    <string name="care_medicine">medicação</string>
+    <string name="care_grooming">higiene</string>
+</resources>

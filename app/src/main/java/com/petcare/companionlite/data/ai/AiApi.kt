@@ -1,5 +1,9 @@
 package com.petcare.companionlite.data.ai
 
+import com.petcare.companionlite.core.inAppLanguage
+
+import com.petcare.companionlite.R
+
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -30,6 +34,8 @@ sealed interface AiCallOutcome {
 // v1 structured contract: single non-streaming JSON answer, validated server-side.
 // Android renders explicit answer fields and never displays raw model output.
 class AiApi(
+    private val context: android.content.Context,
+    private val integrity: IntegrityClient,
     private val baseUrl: String = AI_BASE_URL_DEFAULT,
     private val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(20, TimeUnit.SECONDS)
@@ -37,6 +43,34 @@ class AiApi(
         .writeTimeout(20, TimeUnit.SECONDS)
         .build(),
 ) {
+    private suspend fun post(path: String, payload: JSONObject, attest: Boolean = true): Request {
+        val body=payload.toString()
+        val builder=Request.Builder().url("$baseUrl$path").post(body.toRequestBody("application/json".toMediaType()))
+        if (attest) integrity.headers(path,body).forEach { (name,value) -> builder.header(name,value) }
+        else {
+            require(path == "/v1/quota/status")
+            builder.header("x-installation-secret",integrity.installationSecret())
+        }
+        return builder.build()
+    }
+    suspend fun deleteData(installationId:String):Boolean = withContext(Dispatchers.IO) {
+        runCatching { client.newCall(post("/v1/data/delete",JSONObject().put("installationId",installationId))).execute().use { it.isSuccessful } }.getOrDefault(false)
+    }
+    suspend fun quotaStatus(installationId:String):AiQuota? = withContext(Dispatchers.IO) {
+        runCatching {
+            val payload = JSONObject().put("installationId",installationId)
+            val response = client.newCall(post("/v1/quota/status",payload,false)).execute()
+            response.use {
+                if (it.isSuccessful) return@runCatching parseQuotaOrNull(JSONObject(it.body?.string().orEmpty()).optJSONObject("quota"))
+                if (it.code != 401) return@runCatching null
+            }
+            // The first rewarded ad can precede a chat. Attest once to bind the
+            // installation; subsequent polling uses its secret without repeated attestation.
+            client.newCall(post("/v1/quota/status",payload)).execute().use {
+                if (it.isSuccessful) parseQuotaOrNull(JSONObject(it.body?.string().orEmpty()).optJSONObject("quota")) else null
+            }
+        }.getOrNull()
+    }
     suspend fun chatStructured(
         installationId: String,
         petId: Long,
@@ -67,30 +101,30 @@ class AiApi(
         if (!purchaseToken.isNullOrBlank()) payload.put("purchaseToken", purchaseToken)
         if (!subscriptionId.isNullOrBlank()) payload.put("subscriptionId", subscriptionId)
 
-        val req = Request.Builder()
-            .url("$baseUrl/v1/chat")
-            .post(payload.toString().toRequestBody("application/json".toMediaType()))
-            .header("x-request-id", requestId)
-            .build()
-
         try {
+            val req = post("/v1/chat",payload).newBuilder().header("x-request-id",requestId).build()
             client.newCall(req).execute().use { res ->
                 val raw = res.body?.string().orEmpty()
                 if (res.code == 429) {
+                    if (runCatching { JSONObject(raw).optString("error") }.getOrNull() == "RATE_LIMITED") {
+                        return@withContext AiCallOutcome.Failure(
+                            context.inAppLanguage().getString(R.string.ui_9ffa9a1a62), "RATE_LIMITED",
+                        )
+                    }
                     val quota = runCatching { parseQuota(JSONObject(raw)) }.getOrNull()
                     return@withContext AiCallOutcome.QuotaExhausted(quota)
                 }
                 if (!res.isSuccessful) {
                     Log.w(TAG, "chat HTTP ${res.code}")
                     return@withContext AiCallOutcome.Failure(
-                        "AI service error (${res.code}). Your question was kept — tap Retry.",
+                        context.inAppLanguage().getString(R.string.ui_5abf190b0a, res.code),
                         "HTTP_${res.code}",
                     )
                 }
                 val json = runCatching { JSONObject(raw) }.getOrElse {
                     Log.w(TAG, "chat BAD_RESPONSE len=${raw.length}")
                     return@withContext AiCallOutcome.Failure(
-                        "Unexpected AI response. Your question was kept — tap Retry.",
+                        context.inAppLanguage().getString(R.string.ui_77568584db),
                         "BAD_RESPONSE",
                     )
                 }
@@ -121,7 +155,7 @@ class AiApi(
                 if (answer == null) {
                     Log.w(TAG, "chat BAD_ANSWER")
                     return@withContext AiCallOutcome.Failure(
-                        "Couldn't format that answer. Your question was kept — tap Retry.",
+                        context.inAppLanguage().getString(R.string.ui_9eb7c346dc),
                         "BAD_ANSWER",
                     )
                 }
@@ -132,8 +166,8 @@ class AiApi(
             val offline = e is java.net.UnknownHostException || e is java.net.ConnectException ||
                 e is java.net.SocketTimeoutException
             AiCallOutcome.Failure(
-                if (offline) "You're offline. AI needs an internet connection — your question was kept."
-                else (e.message ?: "Network error. Your question was kept — tap Retry."),
+                if (offline) context.inAppLanguage().getString(R.string.ui_9605446d6e)
+                else (e.message ?: context.inAppLanguage().getString(R.string.ui_fee216d567)),
                 if (offline) "OFFLINE" else "NETWORK",
             )
         }
@@ -153,10 +187,7 @@ class AiApi(
                 .put("category", category)
                 .put("detail", detail.take(1000))
                 .put("messageExcerpt", excerpt.take(1000))
-            val req = Request.Builder()
-                .url("$baseUrl/v1/chat/report")
-                .post(payload.toString().toRequestBody("application/json".toMediaType()))
-                .build()
+            val req = post("/v1/chat/report",payload)
             client.newCall(req).execute().use { it.isSuccessful }
         } catch (_: Exception) {
             false
@@ -172,18 +203,18 @@ class AiApi(
 
     suspend fun verifyPurchase(
         installationId: String,
-        subscriptionId: String,
-        purchaseToken: String,
+        subscriptionId: String?,
+        purchaseToken: String?,
+        lifetimeToken: String? = null,
     ): VerifyResult? = withContext(Dispatchers.IO) {
         try {
             val payload = JSONObject()
                 .put("installationId", installationId)
                 .put("subscriptionId", subscriptionId)
                 .put("purchaseToken", purchaseToken)
-            val req = Request.Builder()
-                .url("$baseUrl/v1/billing/google/verify")
-                .post(payload.toString().toRequestBody("application/json".toMediaType()))
-                .build()
+                .put("lifetimeProductId", if (lifetimeToken != null) "premium_unlock" else null)
+                .put("lifetimePurchaseToken", lifetimeToken)
+            val req = post("/v1/billing/google/verify",payload)
             client.newCall(req).execute().use { res ->
                 if (!res.isSuccessful) {
                     Log.w(TAG, "verify HTTP ${res.code}")
@@ -228,6 +259,7 @@ class AiApi(
         .put("species", ctx.species)
         .put("breed", ctx.breed)
         .put("ageYears", ctx.ageYears)
+        .put("ageMonths", ctx.ageMonths)
         .put("weightKg", ctx.weightKg)
         .put("summary7d", ctx.summary7d)
         .put("overdue", JSONArray(ctx.overdue))
@@ -249,6 +281,7 @@ class AiApi(
             used = q.optInt("used", 0),
             remaining = q.optInt("remaining", 0),
             bonusRemaining = q.optInt("bonusRemaining", 0),
+            bonusReady = q.optBoolean("bonusReady",false),
             resetAt = q.optString("resetAt").takeIf { it.isNotEmpty() },
         )
     }

@@ -1,5 +1,9 @@
 package com.petcare.companionlite.data.ai
 
+import com.petcare.companionlite.core.inAppLanguage
+
+import com.petcare.companionlite.R
+
 import com.petcare.companionlite.data.local.ChatDraftDao
 import com.petcare.companionlite.data.local.ChatMessageDao
 import com.petcare.companionlite.data.local.ChatSessionDao
@@ -23,6 +27,7 @@ import org.json.JSONObject
 // Server quota is authoritative; _quota mirrors the last server snapshot.
 // Assistant answers are validated structured payloads, never raw model text.
 class AiRepository(
+    private val context: android.content.Context,
     private val api: AiApi,
     private val sessions: ChatSessionDao,
     private val messages: ChatMessageDao,
@@ -30,6 +35,8 @@ class AiRepository(
     private val settings: SettingsStore,
     private val contextBuilder: AiContextBuilder,
 ) {
+    private val dataEpoch = java.util.concurrent.atomic.AtomicLong()
+    fun invalidatePendingResults() { dataEpoch.incrementAndGet(); _quota.value = null }
     private val _quota = MutableStateFlow<AiQuota?>(null)
     val quota: StateFlow<AiQuota?> = _quota.asStateFlow()
 
@@ -51,20 +58,38 @@ class AiRepository(
         subscriptionId: String = "ai_weekly_pass",
     ): Boolean {
         val installationId = settings.getOrCreateInstallationId()
-        settings.setAiPurchase(purchaseToken, subscriptionId)
-        val result = api.verifyPurchase(installationId, subscriptionId, purchaseToken)
+        val epoch = dataEpoch.get()
+        val result = api.verifyPurchase(installationId, subscriptionId, purchaseToken, settings.getLifetimeToken())
             ?: return false
+        if (dataEpoch.get() != epoch || settings.getAiPurchaseToken() != purchaseToken) return false
         result.quota?.let { _quota.value = it }
-        if (result.tier != "pro") return false
-        settings.setAiWeeklyPro(true, result.expiryMillis)
-        return true
+        if (!result.verified || result.tier != "pro") return false
+        return settings.applyVerifiedExpiry(purchaseToken, result.expiryMillis)
     }
 
     /** Re-apply a stored Play token so AI quota matches the local Pro plan. */
     suspend fun syncStoredPurchase() {
-        val token = settings.getAiPurchaseToken() ?: return
+        val token = settings.getAiPurchaseToken()
+        val lifetime = settings.getLifetimeToken()
+        if (token == null) {
+            if (lifetime != null) {
+                api.verifyPurchase(settings.getOrCreateInstallationId(), null, null, lifetime)?.takeIf { it.verified }?.quota?.let { _quota.value = it }
+            }
+            return
+        }
         val sku = settings.getAiSubscriptionId() ?: "ai_monthly_pass"
         verifyAndApplyPurchase(token, sku)
+    }
+
+    suspend fun awaitVerifiedReward():Boolean {
+        val installation=settings.getOrCreateInstallationId()
+        repeat(15) {
+            val quota=api.quotaStatus(installation)
+            quota?.let { _quota.value=it }
+            if (quota?.bonusReady == true) return true
+            kotlinx.coroutines.delay(2_000)
+        }
+        return false
     }
 
     fun observeSessions(petId: Long): Flow<List<ChatSession>> =
@@ -74,6 +99,7 @@ class AiRepository(
         sessions.observeAll().map { list -> list.map { it.toDomain() } }
 
     suspend fun clearAllChats() {
+        invalidatePendingResults()
         drafts.deleteAll()
         messages.deleteAll()
         sessions.deleteAll()
@@ -84,11 +110,18 @@ class AiRepository(
 
     /** Reopen the latest active session for this pet; create one only if none exists. */
     suspend fun openLatestSession(petId: Long): Long {
-        sessions.getLatestForPet(petId)?.let { return it.id }
+        sessions.getLatestForPet(petId)?.let {
+            recoverInterruptedMessages(it.id)
+            return it.id
+        }
         val now = System.currentTimeMillis()
         return sessions.insert(
             ChatSessionEntity(petId = petId, title = "", createdAt = now, updatedAt = now),
         )
+    }
+
+    suspend fun recoverInterruptedMessages(sessionId: Long) {
+        messages.failInterruptedMessages(sessionId, System.currentTimeMillis() - 90_000L)
     }
 
     suspend fun newSession(petId: Long): Long {
@@ -125,8 +158,9 @@ class AiRepository(
         retryRequestId: String? = null,
         retryAssistantId: Long? = null,
     ): AiSendResult {
+        val epoch = dataEpoch.get()
         val trimmed = text.trim().take(2000)
-        if (trimmed.isEmpty()) return AiSendResult.Failed("Type a question first.")
+        if (trimmed.isEmpty()) return AiSendResult.Failed(context.inAppLanguage().getString(R.string.ui_c8032e9b51))
         val installationId = settings.getOrCreateInstallationId()
         val now = System.currentTimeMillis()
         // Reused across retries so the server never double-charges one question.
@@ -174,8 +208,7 @@ class AiRepository(
             messages.updateMessageResult(retryAssistantId, "SENDING", "", null, null)
         }
 
-        return when (
-            val out = api.chatStructured(
+        val out = api.chatStructured(
                 installationId = installationId,
                 petId = petId,
                 message = trimmed,
@@ -188,17 +221,18 @@ class AiRepository(
                 purchaseToken = purchaseToken,
                 subscriptionId = subscriptionId,
             )
-        ) {
+        if (dataEpoch.get() != epoch) return AiSendResult.Failed(context.inAppLanguage().getString(R.string.ui_423380173a), "DATA_DELETED")
+        return when (out) {
             is AiCallOutcome.Success -> {
                 out.result.quota?.let { _quota.value = it }
                 if (out.result.duplicate) {
                     messages.updateMessageResult(assistantRowId, "FAILED", "", null, "DUPLICATE")
-                    AiSendResult.Failed("Already sent. Your conversation already has this answer.")
+                    AiSendResult.Failed(context.inAppLanguage().getString(R.string.ui_c59b6c9c51))
                 } else {
                     val answer = out.result.answer
                     if (answer == null) {
                         messages.updateMessageResult(assistantRowId, "FAILED", "", null, "EMPTY_REPLY")
-                        AiSendResult.Failed("Empty reply. Your question was kept — tap Retry.", "EMPTY_REPLY")
+                        AiSendResult.Failed(context.inAppLanguage().getString(R.string.ui_ab02c70c11), "EMPTY_REPLY")
                     } else {
                         val payload = JSONObject().apply {
                             put("schemaVersion", 1)

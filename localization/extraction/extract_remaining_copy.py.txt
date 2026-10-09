@@ -1,0 +1,57 @@
+"""Extract remaining display-copy sites, keeping persisted identifiers untouched."""
+from pathlib import Path
+import re, hashlib, html, json
+import extract_ui_strings as first
+
+ROOT=first.ROOT
+BASE=first.BASE
+catalogue={}
+receivers={
+    'BillingManager.kt':'appContext', 'AiApi.kt':'context', 'AiRepository.kt':'context',
+    'AiChatViewModel.kt':'app', 'DashboardViewModel.kt':'app', 'PetDetailViewModel.kt':'app',
+    'ToolsHubViewModel.kt':'appContext', 'PetRepository.kt':'context',
+}
+for path in (BASE/'java/com/petcare/companionlite').rglob('*.kt'):
+    if '/ui/' not in path.as_posix() and path.name not in receivers: continue
+    source=path.read_text(encoding='utf-8');replacements={};i=0
+    while i < len(source):
+        if source.startswith('//',i):
+            end=source.find('\n',i);i=len(source) if end<0 else end+1;continue
+        if source[i]!='"':i+=1;continue
+        end,value,args=first.quoted(source,i)
+        prefix=source[max(0,source.rfind('\n',0,i)):i]
+        display=False; receiver=receivers.get(path.name)
+        if receiver:
+            display=bool(re.search(r'(?:message\s*=|_message.value\s*=|onMessage\(|toastMessage\s*=|AiSendResult.Failed\(|AiCallOutcome.Failure\()\s*$',prefix))
+            # Multiline first argument to a failure, or if/else failure message.
+            preceding=source[max(0,i-180):i]
+            if path.name in ('AiApi.kt','AiRepository.kt') and 'AiCallOutcome.Failure(' in preceding:
+                display=not bool(re.search(r'"\s*,[^,]*$',preceding))
+        else:
+            display=bool(re.search(r'(?:->|\bto|\belse|ifBlank\s*\{|(?:title|description|label)\s*=|val\s+(?:screenTitle|milestoneMsg|nextReminderInfo|moodText|subtitle|message)\s*=|(?:ToolSection|EmptyHint|StatusChip|SummaryChip|InputDialog)\()\s*$',prefix))
+            if path.name=='ToolsHubScreen.kt' and re.search(r'ToolSection\(',prefix):display=True
+        # Internal IDs are short protocol tokens, not display copy.
+        if not re.search('[A-Za-z]',value) or re.fullmatch('[A-Z_0-9]+',value) or value.startswith(('http:','https:','petcare:')):display=False
+        if re.fullmatch('[a-z0-9_-]+',value) and value not in ('your pet','pending'):display=False
+        if path.name=='PetCareApp.kt' and source.rfind('sealed class AppDestination',0,i)>=0:display=False
+        if 'stringResource(' in prefix or '.getString(' in prefix or 'requestSignal' in prefix:display=False
+        if display:
+            key='ui_'+hashlib.sha1(value.encode()).hexdigest()[:10];catalogue[key]=value
+            call=('stringResource(' if not receiver else receiver+'.inAppLanguage().getString(')+'R.string.'+key+''.join(', '+a for a in args)+')'
+            replacements[(i,end)]=call
+        i=end
+    if replacements:
+        for (start,end),call in sorted(replacements.items(),reverse=True):source=source[:start]+call+source[end:]
+        imports=['com.petcare.companionlite.R']+(['com.petcare.companionlite.core.inAppLanguage'] if receiver else ['androidx.compose.ui.res.stringResource'])
+        for name in imports:
+            if 'import '+name+'\n' not in source:
+                end=source.index('\n')+1;source=source[:end]+'\nimport '+name+'\n'+source[end:]
+        path.write_text(source,encoding='utf-8')
+p=BASE/'res/values/strings.xml';xml=p.read_text(encoding='utf-8');new=''
+for key,value in sorted(catalogue.items()):
+    if 'name="'+key+'"' in xml:continue
+    escaped=html.escape(value,quote=False).replace("'","\\'").replace('"','\\"').replace('\n',r'\n')
+    new+='    <string name="'+key+'">'+escaped+'</string>\n'
+p.write_text(xml.replace('</resources>',new+'</resources>'),encoding='utf-8')
+(ROOT/'localization/remaining-copy.json').write_text(json.dumps(catalogue,ensure_ascii=False,indent=2),encoding='utf-8')
+print('Additional display copy:',len(catalogue))

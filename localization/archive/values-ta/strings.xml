@@ -1,0 +1,28 @@
+<resources>
+    <string name="settings">அமைப்புகள்</string>
+    <string name="nav_dashboard">முகப்பு</string>
+    <string name="nav_tools">கருவிகள்</string>
+    <string name="nav_emergency">அவசரம்</string>
+    <string name="nav_settings">அமைப்புகள்</string>
+    <string name="app_language">ஆப் மொழி</string>
+    <string name="appearance">தோற்றம்</string>
+    <string name="theme_light">வெளிர்</string>
+    <string name="theme_dark">இருள்</string>
+    <string name="upgrade_to_pro">PetCare Pro பெறுக</string>
+    <string name="ask_ai_about">%1$s பற்றி AI-யிடம் கேளுங்கள்</string>
+    <string name="greeting_morning">காலை வணக்கம்</string>
+    <string name="greeting_afternoon">மதிய வணக்கம்</string>
+    <string name="greeting_evening">மாலை வணக்கம்</string>
+    <string name="greeting_night">இரவு வணக்கம்</string>
+    <string name="pet_needs_you">%1$s-க்கு நீங்கள் தேவை</string>
+    <string name="maybe_later">பிறகு</string>
+    <string name="privacy_choices">விளம்பரத் தனியுரிமை விருப்பங்கள்</string>
+    <string name="pro_access_active">Pro அணுகல் செயலில் உள்ளது</string>
+    <string name="cancel_in_play">சந்தாக்கள் தானாகப் புதுப்பிக்கப்படும். Google Play இல் எப்போது வேண்டுமானாலும் ரத்து செய்யலாம்.</string>
+    <string name="care_reminder_title">%1$s பராமரிப்பு நினைவூட்டல்</string>
+    <string name="care_reminder_body">பராமரிப்புப் பணி: %1$s. செல்லப்பிராணியின் பராமரிப்புப் பதிவைத் திறக்கத் தட்டவும்.</string>
+    <string name="care_feed">உணவளித்தல்</string>
+    <string name="care_walk">நடைப்பயிற்சி</string>
+    <string name="care_medicine">மருந்து கொடுத்தல்</string>
+    <string name="care_grooming">சுத்தம் மற்றும் பராமரிப்பு</string>
+</resources>

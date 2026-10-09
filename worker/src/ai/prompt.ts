@@ -66,7 +66,8 @@ export function buildPetContextBlock(ctx?: PetContext): string {
   if (ctx.name) lines.push(`Name: ${ctx.name}`);
   if (ctx.species) lines.push(`Species: ${ctx.species}`);
   if (ctx.breed) lines.push(`Breed: ${ctx.breed}`);
-  if (ctx.ageYears !== undefined && ctx.ageYears !== "") lines.push(`Age: ${ctx.ageYears} years`);
+  if (ctx.ageMonths !== undefined) lines.push(`Age: ${ctx.ageMonths} months`);
+  else if (ctx.ageYears !== undefined && ctx.ageYears !== "") lines.push(`Age: approximately ${ctx.ageYears} years`);
   if (ctx.weightKg !== undefined && ctx.weightKg !== "") lines.push(`Weight: ${ctx.weightKg} kg`);
   if (ctx.summary7d) lines.push(`Recent care (7d): ${ctx.summary7d}`);
   if (ctx.overdue?.length) lines.push(`Overdue: ${ctx.overdue.join("; ")}`);

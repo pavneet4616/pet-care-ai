@@ -1,6 +1,7 @@
 package com.petcare.companionlite.notifications
 
 import android.Manifest
+import com.petcare.companionlite.core.inAppLanguage
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -46,6 +47,10 @@ class WeeklyReportWorker(
             val app = applicationContext as PetCareApplication
             val repo = app.container.repository
             val settingsStore = app.container.settingsStore
+            if (!settingsStore.settings.first().weeklySummary) {
+                reschedule()
+                return Result.success()
+            }
 
             // Check if user recently opened the app (within 2 hours)
             val nowMillis = System.currentTimeMillis()
@@ -65,34 +70,28 @@ class WeeklyReportWorker(
             val zoneId = ZoneId.systemDefault()
             val weekStartMillis = LocalDate.now(zoneId).minusDays(6)
                 .atStartOfDay(zoneId).toInstant().toEpochMilli()
-            val allActivities = repo.getActivitiesSince(weekStartMillis - 7 * 24 * 60 * 60 * 1000L) // Fetch 14 days for trend comparison
+            val allActivities = repo.getActivitiesSince(LocalDate.now(zoneId).minusDays(13).atStartOfDay(zoneId).toInstant().toEpochMilli()) // Fetch 14 days for trend comparison
             val allReminders = repo.getAllReminders()
 
-            // Build report for the pet with the most activity (primary pet)
-            val primaryPet = pets.maxByOrNull { pet ->
-                allActivities.count { it.petId == pet.id && it.timestamp >= weekStartMillis }
-            } ?: pets.first()
-
-            val petActivities = allActivities
-                .filter { it.petId == primaryPet.id }
-                .mapNotNull { it.toDomain() }
-            val petReminders = allReminders
-                .filter { it.petId == primaryPet.id }
-                .mapNotNull { it.toDomain() }
-
-            val report = PetStateEngine.generateWeeklyReport(
-                pet = primaryPet.toProfile(),
-                activities = petActivities,
-                reminders = petReminders,
-                zoneId = zoneId,
-            )
+            val localized = applicationContext.inAppLanguage(settingsStore.settings.first().appLanguageTag)
+            val reports = pets.map { pet ->
+                PetStateEngine.generateWeeklyReport(
+                    pet = pet.toProfile(),
+                    activities = allActivities.filter { it.petId == pet.id }.mapNotNull { it.toDomain() },
+                    reminders = allReminders.filter { it.petId == pet.id }.mapNotNull { it.toDomain() },
+                    zoneId = zoneId, context = localized,
+                )
+            }
+            val headline = if (reports.size == 1) reports.first().headline
+                else localized.getString(R.string.weekly_all_pets_headline, reports.size)
+            val body = localized.getString(R.string.weekly_open_report)
 
             // Update state
             settingsStore.setUnreadWeeklyReport(true)
             settingsStore.setLastReportTimestamp(nowMillis)
 
             // Send notification
-            if (ContextCompat.checkSelfPermission(
+            if (android.os.Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(
                     applicationContext, Manifest.permission.POST_NOTIFICATIONS
                 ) == PackageManager.PERMISSION_GRANTED
             ) {
@@ -111,9 +110,9 @@ class WeeklyReportWorker(
                     applicationContext, NotificationChannels.WEEKLY_REPORT
                 )
                     .setSmallIcon(R.drawable.ic_launcher_foreground)
-                    .setContentTitle(report.headline) // Personalized CTA
-                    .setContentText("Tap to view your full weekly insights.")
-                    .setStyle(NotificationCompat.BigTextStyle().bigText("Tap to view your full weekly insights."))
+                    .setContentTitle(headline) // Personalized CTA
+                    .setContentText(body)
+                    .setStyle(NotificationCompat.BigTextStyle().bigText(body))
                     .setPriority(NotificationCompat.PRIORITY_HIGH)
                     .setContentIntent(pendingIntent)
                     .setAutoCancel(true)

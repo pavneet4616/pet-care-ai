@@ -1,0 +1,36 @@
+<resources>
+    <string name="settings">ਸੈਟਿੰਗਾਂ</string>
+    <string name="back">ਵਾਪਸ</string>
+    <string name="cancel">ਰੱਦ ਕਰੋ</string>
+    <string name="nav_dashboard">ਡੈਸ਼ਬੋਰਡ</string>
+    <string name="nav_tools">ਟੂਲ</string>
+    <string name="nav_emergency">ਐਮਰਜੈਂਸੀ</string>
+    <string name="nav_settings">ਸੈਟਿੰਗਾਂ</string>
+    <string name="app_language">ਐਪ ਦੀ ਭਾਸ਼ਾ</string>
+    <string name="appearance">ਦਿੱਖ</string>
+    <string name="notifications">ਸੂਚਨਾਵਾਂ</string>
+    <string name="system_default">ਸਿਸਟਮ ਡਿਫਾਲਟ</string>
+    <string name="theme_light">ਲਾਈਟ</string>
+    <string name="theme_dark">ਡਾਰਕ</string>
+    <string name="upgrade_to_pro">PetCare Pro ਲਓ</string>
+    <string name="explore_pro">Pro ਵੇਖੋ</string>
+    <string name="restore_purchases">ਖਰੀਦਾਂ ਰੀਸਟੋਰ ਕਰੋ</string>
+    <string name="ask_ai_about">%1$s ਬਾਰੇ AI ਤੋਂ ਪੁੱਛੋ</string>
+    <string name="greeting_morning">ਸ਼ੁਭ ਸਵੇਰ</string>
+    <string name="greeting_afternoon">ਸ਼ੁਭ ਦੁਪਹਿਰ</string>
+    <string name="greeting_evening">ਸ਼ੁਭ ਸ਼ਾਮ</string>
+    <string name="greeting_night">ਸ਼ੁਭ ਰਾਤ</string>
+    <string name="pet_needs_you">%1$s ਨੂੰ ਤੁਹਾਡੀ ਲੋੜ ਹੈ</string>
+    <string name="monthly_pro">ਮਾਸਿਕ Pro</string>
+    <string name="weekly_pro">ਹਫ਼ਤਾਵਾਰੀ Pro</string>
+    <string name="maybe_later">ਬਾਅਦ ਵਿੱਚ</string>
+    <string name="privacy_choices">ਇਸ਼ਤਿਹਾਰਾਂ ਦੀ ਪਰਦੇਦਾਰੀ ਦੇ ਵਿਕਲਪ</string>
+    <string name="pro_access_active">Pro ਪਹੁੰਚ ਚਾਲੂ ਹੈ</string>
+    <string name="cancel_in_play">ਸਬਸਕ੍ਰਿਪਸ਼ਨ ਆਪਣੇ ਆਪ ਨਵਿਆਏ ਜਾਂਦੇ ਹਨ। Google Play ਵਿੱਚ ਕਿਸੇ ਵੀ ਸਮੇਂ ਰੱਦ ਕਰੋ।</string>
+    <string name="care_reminder_title">%1$s ਦੀ ਦੇਖਭਾਲ ਲਈ ਯਾਦ ਦਿਵਾਉਣਾ</string>
+    <string name="care_reminder_body">ਦੇਖਭਾਲ ਦਾ ਕੰਮ: %1$s। ਆਪਣੇ ਪਾਲਤੂ ਜਾਨਵਰ ਦੀ ਦੇਖਭਾਲ ਦਾ ਰਿਕਾਰਡ ਖੋਲ੍ਹਣ ਲਈ ਟੈਪ ਕਰੋ।</string>
+    <string name="care_feed">ਖਾਣਾ ਖੁਆਉਣਾ</string>
+    <string name="care_walk">ਸੈਰ ਕਰਾਉਣਾ</string>
+    <string name="care_medicine">ਦਵਾਈ ਦੇਣਾ</string>
+    <string name="care_grooming">ਸਫ਼ਾਈ ਅਤੇ ਸਿੰਗਾਰ</string>
+</resources>

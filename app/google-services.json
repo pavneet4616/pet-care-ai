@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "138551758971",
+    "project_id": "ai-pdf-chat-497609",
+    "storage_bucket": "ai-pdf-chat-497609.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:138551758971:android:162cae8b2223e0657552de",
+        "android_client_info": {
+          "package_name": "com.petcares.companionlites"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDy2admccuOKdwhyo9Z_frYgtoe-P0AKls"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

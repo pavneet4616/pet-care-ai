@@ -1,5 +1,10 @@
 package com.petcare.companionlite.ui.pet
 
+import com.petcare.companionlite.R
+
+import androidx.compose.ui.res.stringResource
+
+import com.petcare.companionlite.core.petPhotoModel
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -45,6 +50,7 @@ fun AddPetScreen(
     editPetId: Long? = null,
     viewModel: PetEditorViewModel = viewModel(),
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val state = viewModel.profile
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
         viewModel.updatePhoto(uri?.toString())
@@ -66,14 +72,14 @@ fun AddPetScreen(
         }
     }
 
-    val screenTitle = if (viewModel.isEditMode) "Edit ${state.name}" else "Add your first pet \uD83D\uDC3E"
+    val screenTitle = if (viewModel.isEditMode) "Edit ${state.name}" else stringResource(R.string.ui_10a8b386c1)
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(screenTitle) },
                 navigationIcon = {
-                    TextButton(onClick = onBack) { Text("Back") }
+                    TextButton(onClick = onBack) { Text(stringResource(R.string.ui_b52b36b726)) }
                 },
             )
         },
@@ -90,17 +96,17 @@ fun AddPetScreen(
                     OutlinedTextField(
                         value = state.name,
                         onValueChange = viewModel::updateName,
-                        label = { Text("Name") },
+                        label = { Text(stringResource(R.string.ui_709a23220f)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                     )
-                    Text("Pet type", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.ui_115c11769d), style = MaterialTheme.typography.bodySmall)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf("Dog", "Cat", "Bird", "Other").forEach { option ->
                             val selected = state.type.equals(option, ignoreCase = true)
                             AssistChip(
                                 onClick = { viewModel.updateType(option) },
-                                label = { Text(option) },
+                                label = { Text(com.petcare.companionlite.ui.components.petTypeLabel(com.petcare.companionlite.data.model.PetType.fromString(option))) },
                                 colors = if (selected) {
                                     AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.primary, labelColor = MaterialTheme.colorScheme.onPrimary)
                                 } else {
@@ -112,7 +118,7 @@ fun AddPetScreen(
                     OutlinedTextField(
                         value = state.breed,
                         onValueChange = viewModel::updateBreed,
-                        label = { Text("Breed (optional)") },
+                        label = { Text(stringResource(R.string.ui_7622f8804d)) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                     )
@@ -120,31 +126,40 @@ fun AddPetScreen(
                         OutlinedTextField(
                             value = state.weightKg,
                             onValueChange = viewModel::updateWeight,
-                            label = { Text("Weight (kg)") },
+                            label = { Text(stringResource(if (com.petcare.companionlite.ui.components.LocalWeightUnit.current == stringResource(R.string.ui_cba4181417)) R.string.unit_lb else R.string.unit_kg)) },
                             modifier = Modifier.weight(1f),
                             singleLine = true,
                         )
                         OutlinedTextField(
                             value = state.ageYears,
                             onValueChange = viewModel::updateAge,
-                            label = { Text("Age (years)") },
+                            label = { Text(stringResource(R.string.ui_3a996f0dac)) },
                             modifier = Modifier.weight(1f),
                             singleLine = true,
                         )
                     }
 
                     // Photo selection with preview
+                    OutlinedTextField(
+                        value = state.birthDate,
+                        onValueChange = viewModel::updateBirthDate,
+                        label = { Text(androidx.compose.ui.res.stringResource(com.petcare.companionlite.R.string.birth_date_optional)) },
+                        placeholder = { Text(stringResource(R.string.ui_d3f8f7b810)) },
+                        modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    )
+
+                    // Photo selection with preview
                     Button(onClick = {
                         launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                     }) {
-                        Text(if (state.photoUri == null) "📷 Choose Photo" else "📷 Change Photo")
+                        Text(if (state.photoUri == null) stringResource(R.string.ui_cc4c1c5d8d) else stringResource(R.string.ui_19d722403a))
                     }
 
                     // Photo preview
                     if (state.photoUri != null) {
                         AsyncImage(
-                            model = state.photoUri,
-                            contentDescription = "Selected pet photo",
+                            model = context.petPhotoModel(state.photoUri),
+                            contentDescription = stringResource(R.string.ui_1d4b6e854f),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(180.dp)
@@ -162,7 +177,7 @@ fun AddPetScreen(
                         shape = RoundedCornerShape(16.dp),
                     ) {
                         Text(
-                            if (viewModel.isEditMode) "Save Changes" else "Save Pet 🐾",
+                            if (viewModel.isEditMode) stringResource(R.string.ui_fa2984b367) else stringResource(R.string.ui_dca14980d9),
                             style = MaterialTheme.typography.titleLarge,
                         )
                     }
@@ -170,11 +185,12 @@ fun AddPetScreen(
                     // Error feedback
                     when (viewModel.lastSaveResult) {
                         PetSaveResult.FreeLimitReached -> Text(
-                            "Free tier allows up to 2 pets. Upgrade to add more.",
+                            stringResource(R.string.ui_8bdbe90db6),
                             color = MaterialTheme.colorScheme.error,
                         )
+                        PetSaveResult.PhotoError -> Text(stringResource(R.string.photo_save_failed))
                         PetSaveResult.InvalidInput -> Text(
-                            "Please complete name, weight, and age with valid values.",
+                            stringResource(R.string.ui_4500c81a97),
                             color = MaterialTheme.colorScheme.error,
                         )
                         else -> Unit
@@ -182,7 +198,7 @@ fun AddPetScreen(
 
                     // Disclaimer
                     Text(
-                        "Not a substitute for veterinary advice",
+                        stringResource(R.string.ui_fe2bdf9779),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                     )

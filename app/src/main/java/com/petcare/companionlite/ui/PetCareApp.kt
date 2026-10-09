@@ -5,6 +5,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
+import com.petcare.companionlite.R
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -84,6 +85,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun PetCareApp(
+    deepLinkKey: Int = 0,
     openWeeklyReport: Boolean = false,
     openAiChatPetId: Long = 0L,
     openAiChatPrefill: String = "",
@@ -120,16 +122,20 @@ fun PetCareApp(
     }
     var notificationRequestSignal by remember { mutableIntStateOf(0) }
     var notificationsEnabled by remember { mutableStateOf(context.notificationsEnabled()) }
+    val selectedPet = dashboardState.pets.firstOrNull { it.pet.id == dashboardState.settings.selectedPetId } ?: dashboardState.pets.firstOrNull()
+    LaunchedEffect(activity) {
+        app.container.reviewPrompter.positiveMoments.collect { activity?.let { app.container.reviewPrompter.request(it) } }
+    }
 
     // Deep link: Send to ViewModel to avoid NavHost cold-start race conditions
-    LaunchedEffect(openWeeklyReport) {
+    LaunchedEffect(openWeeklyReport, deepLinkKey) {
         if (openWeeklyReport) {
             dashboardViewModel.handleDeepLinkWeeklyReport()
         }
     }
 
     // Deep link from AI follow-up notification: open chat once pets are loaded.
-    var aiDeepLinkConsumed by remember { mutableStateOf(false) }
+    var aiDeepLinkConsumed by remember(deepLinkKey) { mutableStateOf(false) }
     LaunchedEffect(openAiChatPetId, dashboardState.pets.isNotEmpty(), aiDeepLinkConsumed) {
         if (!aiDeepLinkConsumed && openAiChatPetId != 0L && dashboardState.pets.isNotEmpty()) {
             aiDeepLinkConsumed = true
@@ -162,6 +168,7 @@ fun PetCareApp(
     }
 
     NotificationPermissionEffect(
+        hasReminder = app.container.repository.hasReminders.collectAsStateWithLifecycle(initialValue = false).value,
         hasBeenPrompted = dashboardState.settings.notificationPromptShown,
         requestSignal = notificationRequestSignal,
         onPromptHandled = {
@@ -169,13 +176,14 @@ fun PetCareApp(
             notificationsEnabled = context.notificationsEnabled()
         },
         onResult = { granted ->
+            app.container.diagnostics.event("notif_permission_result",if (granted) "granted" else "denied")
             notificationsEnabled = granted || context.notificationsEnabled()
             scope.launch {
                 snackbarHostState.showSnackbar(
                     if (notificationsEnabled) {
-                        "Reminder notifications enabled."
+                        context.getString(R.string.notifications_enabled_message)
                     } else {
-                        "Notifications are off. Reminders will stay in-app until you enable them."
+                        context.getString(R.string.notifications_off_message)
                     },
                 )
             }
@@ -183,9 +191,12 @@ fun PetCareApp(
     )
 
     LaunchedEffect(Unit) {
-        app.container.adsManager.loadInterstitial(context)
-        app.container.adsManager.loadRewarded(context)
         dashboardViewModel.startBilling()
+    }
+
+    val adsAllowed by app.container.adsManager.adsAllowed.collectAsStateWithLifecycle()
+    LaunchedEffect(adsAllowed, dashboardState.settings.hasNoAds) {
+        if (adsAllowed && !dashboardState.settings.hasNoAds) app.container.adsManager.loadRewarded(context)
     }
 
     LaunchedEffect(dashboardState.billing.message) {
@@ -221,7 +232,7 @@ fun PetCareApp(
             if (showAiFab) {
                 FloatingActionButton(
                     onClick = {
-                        val petId = dashboardState.pets.firstOrNull()?.pet?.id ?: return@FloatingActionButton
+                        val petId = selectedPet?.pet?.id ?: return@FloatingActionButton
                         navController.navigate(AppDestination.AiChat.createRoute(petId)) {
                             launchSingleTop = true
                         }
@@ -249,7 +260,7 @@ fun PetCareApp(
                         onClick = {
                             val route = when (destination) {
                                 is AppDestination.CareTools -> {
-                                    val petId = dashboardState.pets.firstOrNull()?.pet?.id
+                                    val petId = selectedPet?.pet?.id
                                     if (petId != null) AppDestination.CareTools.createRoute(petId)
                                     else AppDestination.Dashboard.route
                                 }
@@ -260,10 +271,10 @@ fun PetCareApp(
                                     saveState = true
                                 }
                                 launchSingleTop = true
-                                restoreState = true
+                                restoreState = destination != AppDestination.CareTools
                             }
                         },
-                        icon = { Icon(icon, contentDescription = destination.label) },
+                        icon = { Icon(icon, contentDescription = null) },
                         label = {
                             val labelRes = when (destination) {
                                 AppDestination.Dashboard -> com.petcare.companionlite.R.string.nav_dashboard
@@ -296,6 +307,7 @@ fun PetCareApp(
                 composable(AppDestination.Onboarding.route) {
                     OnboardingScreen(
                         onComplete = { petId ->
+                            app.container.diagnostics.event("onboarding_complete")
                             navController.navigate(AppDestination.Dashboard.route) {
                                 popUpTo(AppDestination.Onboarding.route) { inclusive = true }
                             }
@@ -305,6 +317,7 @@ fun PetCareApp(
                 composable(AppDestination.Dashboard.route) {
                     DashboardScreen(
                         state = dashboardState,
+                        onSelectPet = { id -> scope.launch { app.container.settingsStore.selectPet(id) } },
                         notificationsEnabled = notificationsEnabled,
                         onPetClick = { petId -> navController.navigate(AppDestination.Detail.createRoute(petId)) },
                         onAddPet = { navController.navigate(AppDestination.AddPet.route) },
@@ -324,7 +337,7 @@ fun PetCareApp(
                                 ) {
                                     context.openAppNotificationSettings()
                                     scope.launch {
-                                        snackbarHostState.showSnackbar("Open notifications in system settings to re-enable reminders.")
+                                        snackbarHostState.showSnackbar(context.getString(R.string.notifications_system_message))
                                     }
                                 } else {
                                     notificationRequestSignal += 1
@@ -336,7 +349,7 @@ fun PetCareApp(
                             if (hostActivity != null) {
                                 app.container.billingManager.launchPurchase(
                                     hostActivity,
-                                    BillingManager.premiumProductId,
+                                    BillingManager.aiMonthlyProductId,
                                 )
                             }
                         },
@@ -345,7 +358,7 @@ fun PetCareApp(
                             if (hostActivity != null) {
                                 app.container.billingManager.launchPurchase(
                                     hostActivity,
-                                    BillingManager.removeAdsProductId,
+                                    BillingManager.aiMonthlyProductId,
                                 )
                             }
                         },
@@ -380,9 +393,6 @@ fun PetCareApp(
                     AddPetScreen(
                         onBack = { navController.popBackStack() },
                         onSaved = { petId ->
-                            if (activity != null && !dashboardState.settings.hasNoAds) {
-                                app.container.adsManager.showInterstitialIfReady(activity)
-                            }
                             navController.navigate(AppDestination.Detail.createRoute(petId)) {
                                 popUpTo(AppDestination.Dashboard.route)
                             }
@@ -418,12 +428,12 @@ fun PetCareApp(
                 composable(AppDestination.Emergency.route) {
                     EmergencyScreen(
                         onAskAi = {
-                            val petId = dashboardState.pets.firstOrNull()?.pet?.id
+                            val petId = selectedPet?.pet?.id
                             if (petId != null) {
                                 navController.navigate(
                                     AppDestination.AiChat.createRoute(
                                         petId,
-                                        "This may be urgent. What safe steps can I take right now while contacting my vet?",
+                                        context.getString(R.string.emergency_ai_prompt),
                                     ),
                                 ) {
                                     launchSingleTop = true
@@ -440,7 +450,7 @@ fun PetCareApp(
                             if (hostActivity != null) {
                                 app.container.billingManager.launchPurchase(
                                     hostActivity,
-                                    BillingManager.premiumProductId,
+                                    BillingManager.aiMonthlyProductId,
                                 )
                             }
                         },
@@ -456,7 +466,7 @@ fun PetCareApp(
                     val monthlyPrice = dashboardState.billing.products
                         .firstOrNull { it.id == BillingManager.aiMonthlyProductId }
                         ?.priceText ?: "$9.99"
-                    val petName = dashboardState.pets.firstOrNull()?.pet?.name ?: "your pet"
+                    val petName = selectedPet?.pet?.name ?: "your pet"
                     com.petcare.companionlite.ui.dashboard.SettingsScreen(
                         onBack = { navController.popBackStack() },
                         onManagePets = {
@@ -512,7 +522,7 @@ fun PetCareApp(
                         factory = object : androidx.lifecycle.ViewModelProvider.Factory {
                             override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
                                 @Suppress("UNCHECKED_CAST")
-                                return AiChatViewModel(petId, app.container.aiRepository) as T
+                                return AiChatViewModel(petId, app.container.aiRepository, app) as T
                             }
                         },
                     )
@@ -541,13 +551,13 @@ fun PetCareApp(
                         onWatchAdForBonus = {
                             val hostActivity = activity
                             if (hostActivity != null && app.container.adsManager.isRewardedReady()) {
-                                app.container.adsManager.showRewarded(hostActivity) {
-                                    aiVm.retryWithBonus()
+                                scope.launch {
+                                    val installation=app.container.settingsStore.getOrCreateInstallationId()
+                                    app.container.adsManager.showRewarded(hostActivity,installation) { aiVm.retryWithBonus() }
                                 }
                             } else {
-                                app.container.adsManager.loadRewarded(context)
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("Rewarded video is loading. Try again in a moment.")
+                                                        scope.launch {
+                                    snackbarHostState.showSnackbar(context.getString(R.string.reward_loading))
                                 }
                             }
                         },
@@ -560,6 +570,7 @@ fun PetCareApp(
 
 @Composable
 private fun NotificationPermissionEffect(
+    hasReminder: Boolean,
     hasBeenPrompted: Boolean,
     requestSignal: Int,
     onPromptHandled: () -> Unit,
@@ -573,19 +584,25 @@ private fun NotificationPermissionEffect(
         onResult(granted)
     }
 
-    LaunchedEffect(hasBeenPrompted) {
-        val granted = context.notificationsEnabled()
-        if (granted) return@LaunchedEffect
-        if (!hasBeenPrompted) {
-            launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
+    var showExplanation by remember { mutableStateOf(false) }
+    LaunchedEffect(hasReminder, hasBeenPrompted) {
+        if (hasReminder && !hasBeenPrompted && !context.notificationsEnabled()) showExplanation = true
+    }
+    if (showExplanation) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showExplanation = false; onPromptHandled() },
+            title = { Text(androidx.compose.ui.res.stringResource(com.petcare.companionlite.R.string.notifications)) },
+            text = { Text(androidx.compose.ui.res.stringResource(com.petcare.companionlite.R.string.notification_permission_reason)) },
+            confirmButton = { androidx.compose.material3.TextButton(onClick = { showExplanation = false; launcher.launch(Manifest.permission.POST_NOTIFICATIONS) }) { Text(androidx.compose.ui.res.stringResource(com.petcare.companionlite.R.string.enable_notifications)) } },
+            dismissButton = { androidx.compose.material3.TextButton(onClick = { showExplanation = false; onPromptHandled() }) { Text(androidx.compose.ui.res.stringResource(com.petcare.companionlite.R.string.not_now)) } },
+        )
     }
 
     LaunchedEffect(requestSignal) {
         val granted = context.notificationsEnabled()
         if (granted) return@LaunchedEffect
         if (requestSignal > 0) {
-            launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            showExplanation = true
         }
     }
 }

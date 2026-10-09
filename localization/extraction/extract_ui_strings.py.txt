@@ -1,0 +1,110 @@
+"""Extract display literals from Compose Text and contentDescription calls.
+
+Keeps Kotlin template expressions as Android positional placeholders and never
+changes database, network or enum identifiers. Run before translating the catalogue.
+"""
+from pathlib import Path
+import re
+import json
+import hashlib
+import html
+import subprocess
+
+ROOT = Path(__file__).resolve().parents[1]
+BASE = ROOT / 'app/src/main'
+
+def quoted(source, start):
+    i = start + 1
+    pieces, arguments = [], []
+    while i < len(source):
+        c = source[i]
+        if c == '\\':
+            if source[i+1:i+2] == 'u':
+                pieces.append(chr(int(source[i+2:i+6], 16))); i += 6
+            else:
+                pieces.append({'n':'\n', 't':'\t', 'r':'\r'}.get(source[i+1], source[i+1])); i += 2
+        elif c == '"':
+            decoded = ''.join(pieces).encode('utf-16', 'surrogatepass').decode('utf-16')
+            return i + 1, decoded, arguments
+        elif source[i:i+2] == '${':
+            begin = i + 2; i = begin; depth = 1
+            while depth:
+                if source[i] == '"': i = quoted(source, i)[0]; continue
+                if source[i] == '{': depth += 1
+                elif source[i] == '}': depth -= 1
+                i += 1
+            arguments.append(source[begin:i-1]); pieces.append('%'+str(len(arguments))+'$s')
+        elif c == '$' and re.match(r'[A-Za-z_]', source[i+1:i+2]):
+            m = re.match(r'\$([A-Za-z_][A-Za-z_0-9]*)', source[i:])
+            arguments.append(m[1]); pieces.append('%'+str(len(arguments))+'$s'); i += len(m[0])
+        else:
+            pieces.append(c); i += 1
+    raise ValueError('Unclosed Kotlin string')
+
+resources = BASE / 'res/values/strings.xml'
+catalogue = {}
+# Recover catalogue values from the baseline on a resumed extraction. Mutations
+# are limited to display calls below; this lookup never changes protocol strings.
+for path in (BASE / 'java/com/petcare/companionlite/ui').rglob('*.kt'):
+    previous = subprocess.run(['git','show','HEAD:'+path.relative_to(ROOT).as_posix()],capture_output=True).stdout.decode('utf-8')
+    for match in re.finditer('"',previous):
+        try:
+            _, value, _ = quoted(previous,match.start())
+            catalogue['ui_'+hashlib.sha1(value.encode()).hexdigest()[:10]] = value
+        except (ValueError, IndexError, UnicodeError):
+            pass
+for path in (BASE / 'java/com/petcare/companionlite/ui').rglob('*.kt'):
+    source = path.read_text(encoding='utf-8')
+    ranges = []
+    for match in re.finditer(r'\bText\s*\(', source):
+        begin = match.end(); i = begin; depth = 0
+        while i < len(source):
+            c = source[i]
+            if c == '"': i = quoted(source, i)[0]; continue
+            if c in '([{': depth += 1
+            elif c in ')]}':
+                if depth == 0: break
+                depth -= 1
+            elif c == ',' and depth == 0: break
+            i += 1
+        ranges.append((begin, i))
+    for match in re.finditer(r'contentDescription\s*=\s*"', source):
+        begin = match.end()-1; ranges.append((begin, quoted(source, begin)[0]))
+    replacements = {}
+    for begin, end in ranges:
+        i = begin
+        while i < end:
+            if source[i] != '"': i += 1; continue
+            after, literal, args = quoted(source, i)
+            # Existing resource references may contain string arguments: only
+            # display literals not already inside stringResource are candidates.
+            prefix = source[max(begin,i-80):i]
+            if re.search(r'stringResource\([^)]*$',prefix): i = after; continue
+            if re.search('[A-Za-z]', literal) and not literal.startswith(('http:', 'https:')):
+                name = 'ui_' + hashlib.sha1(literal.encode()).hexdigest()[:10]
+                catalogue[name] = literal
+                invocation = 'stringResource(R.string.'+name+''.join(', '+arg for arg in args)+')'
+                replacements[(i, after)] = invocation
+            i = after
+    if replacements:
+        for (begin, end), replacement in sorted(replacements.items(), reverse=True):
+            source = source[:begin]+replacement+source[end:]
+        for imported in ['androidx.compose.ui.res.stringResource', 'com.petcare.companionlite.R']:
+            if 'import '+imported+'\n' not in source:
+                first = source.index('\n')+1; source = source[:first]+'\nimport '+imported+'\n'+source[first:]
+        path.write_text(source,encoding='utf-8')
+
+xml = resources.read_text(encoding='utf-8')
+referenced = set()
+for path in (BASE / 'java/com/petcare/companionlite/ui').rglob('*.kt'):
+    referenced.update(re.findall(r'R.string.(ui_[a-f0-9]{10})',path.read_text(encoding='utf-8')))
+catalogue = {key:value for key,value in catalogue.items() if key in referenced}
+new = ''
+for name, value in sorted(catalogue.items()):
+    if 'name="'+name+'"' not in xml:
+        escaped = html.escape(value,quote=False).replace("'", "\\'").replace('"','\\"').replace('\n',r'\n')
+        new += '    <string name="'+name+'">'+escaped+'</string>\n'
+resources.write_text(xml.replace('</resources>',new+'</resources>'),encoding='utf-8')
+archive = ROOT / 'localization'; archive.mkdir(exist_ok=True)
+(archive / 'extracted-ui.json').write_text(json.dumps(catalogue,ensure_ascii=False,indent=2),encoding='utf-8')
+print('Extracted',len(catalogue),'display strings.')

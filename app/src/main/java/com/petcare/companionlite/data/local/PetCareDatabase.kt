@@ -30,7 +30,7 @@ import com.petcare.companionlite.data.model.WaterLogEntity
         ChatMessageEntity::class,
         ChatDraftEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 abstract class PetCareDatabase : RoomDatabase() {
@@ -169,6 +169,13 @@ abstract class PetCareDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                TrustMigration.statements.forEach { db.execSQL(it) }
+                db.query("PRAGMA foreign_key_check").use { check(!it.moveToFirst()) }
+            }
+        }
+
         fun getDatabase(context: Context): PetCareDatabase {
             return INSTANCE ?: synchronized(this) {
                 Room.databaseBuilder(
@@ -176,7 +183,7 @@ abstract class PetCareDatabase : RoomDatabase() {
                     PetCareDatabase::class.java,
                     "petcare_companion.db",
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                     .build()
                     .also { INSTANCE = it }
             }

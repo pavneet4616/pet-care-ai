@@ -1,4 +1,4 @@
-import type { ChatRequest, Env } from "../types.js";
+import type { ChatRequest, Env, QuotaSnapshot } from "../types.js";
 import { buildMessages } from "../ai/prompt.js";
 import {
   REPAIR_INSTRUCTION,
@@ -15,6 +15,10 @@ import {
 } from "../security/validation.js";
 import { applyPlayEntitlement } from "./billing.js";
 import { doConsumeBonus, doRelease, doReserve, doStatus, quotaExhaustedBody } from "../quota/client.js";
+import { readAiConfig } from "../security/aiConfig.js";
+import { isLegacyRequest, legacyBucketId, requireIntegrity } from "../security/integrity.js";
+import { registry } from "../security/RegistryDO.js";
+import { sha256 } from "../security/crypto.js";
 
 function badRequest(message: string): Response {
   return Response.json({ error: message }, { status: 400 });
@@ -70,18 +74,68 @@ function langFallback(langHint: unknown): string {
   return "en";
 }
 
+// Legacy daily caps bound spend for unauthenticated traffic. Setting a cap to 0 disables legacy AI.
+const LEGACY_DEFAULT_IP_LIMIT = 25;
+const LEGACY_DEFAULT_GLOBAL_LIMIT = 500;
+
+function dailyCap(raw: string | undefined, fallback: number): number {
+  const value = Number.parseInt(raw ?? "", 10);
+  return Number.isInteger(value) && value >= 0 ? value : fallback;
+}
+
+/** Separate from the authenticated caps. Any registry error or reached cap refuses the request. */
+async function legacyCostGuardAllows(env: Env, ip: string | null): Promise<boolean> {
+  try {
+    const checks = [
+      { key: `legacy-ip:${await sha256(ip ?? "")}`, limit: dailyCap(env.LEGACY_IP_DAILY_LIMIT, LEGACY_DEFAULT_IP_LIMIT) },
+      { key: "legacy-global", limit: dailyCap(env.LEGACY_GLOBAL_DAILY_LIMIT, LEGACY_DEFAULT_GLOBAL_LIMIT) },
+    ];
+    for (const check of checks) {
+      const response = await registry(env, "/cost-guard", check);
+      if (!response.ok || (await response.json() as { allowed?: boolean }).allowed !== true) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Legacy callers never see rewarded credit as available. */
+function legacyQuotaView(quota: QuotaSnapshot): QuotaSnapshot {
+  return { ...quota, bonusRemaining: 0, bonusReady: false };
+}
+
 export async function handleChat(request: Request, env: Env): Promise<Response> {
+  // Enforce the emergency switch before any Play API, quota, or inference call.
+  try {
+    if ((await readAiConfig(env)).aiEnabled === false) {
+      return Response.json({ error: "AI_DISABLED" }, { status: 503 });
+    }
+  } catch {
+    return Response.json({ error: "AI_CONFIG_UNAVAILABLE" }, { status: 503 });
+  }
   let body: ChatRequest;
+  // Pre-Integrity builds get only the restricted legacy path. Any presented attestation is fully verified.
+  const legacy = isLegacyRequest(request, env);
+  const integrityFailure = legacy ? null : await requireIntegrity(request,env);
+  if (integrityFailure) return integrityFailure;
   try {
     body = (await request.json()) as ChatRequest;
   } catch {
     return badRequest("Invalid JSON body.");
   }
+  if (!body || typeof body !== "object" || Array.isArray(body)) return badRequest("Invalid request body.");
+  if (body.recentMessages !== undefined && !Array.isArray(body.recentMessages)) return badRequest("Invalid history.");
+  if (body.recentMessages?.some((m) => !m || typeof m !== "object")) return badRequest("Invalid history message.");
 
   if (!isValidId(body.requestId)) return badRequest("Invalid requestId.");
   if (!isValidId(body.installationId)) return badRequest("Invalid installationId.");
   const message = sanitizeMessage(body.message);
   if (!message) return badRequest("Message must be 1-2000 characters.");
+
+  // Legacy requests use their own free-tier bucket, which never holds a purchase or bonus grant.
+  const bucket = legacy ? legacyBucketId(body.installationId) : body.installationId;
+  if (legacy) console.log(JSON.stringify({ type: "legacy_chat", requestId: body.requestId }));
 
   const history = (body.recentMessages ?? []).slice(-6).map((m) => ({
     role: m.role === "assistant" ? ("assistant" as const) : ("user" as const),
@@ -98,8 +152,8 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
   }
 
   // Attach Pro from a live Play token BEFORE reserving, so a monthly
-  // subscriber is never charged against the free 5-question cap.
-  if (body.purchaseToken && env.GOOGLE_SERVICE_ACCOUNT_JSON) {
+  // subscriber is never charged against the free 5-question cap. Legacy callers cannot attach purchases.
+  if (!legacy && body.purchaseToken && env.GOOGLE_SERVICE_ACCOUNT_JSON) {
     const current = await doStatus(env, body.installationId);
     if (current.tier !== "pro" && current.tier !== "lifetime") {
       const attached = await applyPlayEntitlement(
@@ -120,10 +174,12 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
     }
   }
 
-  const useBonus = (request.url.includes("bonus=1") || (body as { useBonus?: boolean }).useBonus) === true;
+  // Legacy callers can never consume rewarded credit.
+  const useBonus = !legacy && (new URL(request.url).searchParams.get("bonus") === "1" || (body as { useBonus?: boolean }).useBonus === true);
   const reservation = useBonus
-    ? await doConsumeBonus(env, body.installationId, body.requestId)
-    : await doReserve(env, body.installationId, body.requestId);
+    ? await doConsumeBonus(env, bucket, body.requestId)
+    : await doReserve(env, bucket, body.requestId);
+  if (legacy) reservation.quota = legacyQuotaView(reservation.quota);
 
   if (reservation.duplicate) {
     return Response.json(
@@ -131,7 +187,26 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
       { status: 200 },
     );
   }
-  if (!reservation.allowed) return quotaExhaustedBody(reservation.quota);
+  if (!reservation.allowed) return reservation.reason === "REWARD_PENDING" ? Response.json({error:"REWARD_PENDING",quota:reservation.quota},{status:409}) : quotaExhaustedBody(reservation.quota);
+
+  // Operational spend ceiling also bounds scripts rotating UUIDs on a genuine Play install.
+  // These are abuse limits, separate from each customer's unchanged daily question allowance.
+  const ip = request.headers.get("cf-connecting-ip");
+  if (legacy) {
+    // Own buckets, so legacy traffic can neither exhaust nor bypass the authenticated caps.
+    if (!(await legacyCostGuardAllows(env, ip))) {
+      await doRelease(env,bucket,body.requestId);
+      return Response.json({error:"RATE_LIMITED"},{status:429,headers:{"retry-after":"3600"}});
+    }
+  } else if (env.INTEGRITY_REQUIRED !== "false") {
+    const ipGuard=reservation.quota.tier === "free" ? await registry(env,"/cost-guard",{key:`ip:${await sha256(ip ?? "")}`,limit:50}) : null;
+    const ipAllowed=ipGuard ? (await ipGuard.json() as {allowed:boolean}).allowed : true;
+    const globalGuard=ipAllowed ? await registry(env,"/cost-guard",{key:"global",limit:2000}) : null;
+    if (!ipAllowed || !globalGuard || !(await globalGuard.json() as {allowed:boolean}).allowed) {
+      await doRelease(env,bucket,body.requestId);
+      return Response.json({error:"RATE_LIMITED"},{status:429,headers:{"retry-after":"3600"}});
+    }
+  }
 
   if (detectInjectionAttempt(message)) {
     console.log(JSON.stringify({ type: "injection_tripwire", requestId: body.requestId }));
@@ -142,7 +217,7 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
   const model = env.MODEL ?? "";
   const isGlm = model.includes("glm");
   const isQwen = model.includes("qwen");
-  const aiInput: Record<string, unknown> = {
+  const aiInput = {
     messages,
     ...(isGlm
       ? { max_completion_tokens: maxTokens, temperature: 0.3, reasoning_effort: "low" }
@@ -215,7 +290,7 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
         quota: reservation.quota,
       });
     } catch (err) {
-      await doRelease(env, body.installationId, body.requestId);
+      await doRelease(env, bucket, body.requestId);
       console.error(JSON.stringify({ type: "ai_error", requestId: body.requestId, err: String(err) }));
       return Response.json({ error: "AI_UNAVAILABLE" }, { status: 502 });
     }
@@ -263,7 +338,7 @@ export async function handleChat(request: Request, env: Env): Promise<Response> 
     });
   } catch (err) {
     // Release the reservation so failures never burn quota.
-    await doRelease(env, body.installationId, body.requestId);
+    await doRelease(env, bucket, body.requestId);
     console.error(JSON.stringify({ type: "ai_error", requestId: body.requestId, err: String(err) }));
     return Response.json({ error: "AI_UNAVAILABLE" }, { status: 502 });
   }

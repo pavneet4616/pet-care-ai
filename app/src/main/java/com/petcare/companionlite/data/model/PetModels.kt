@@ -19,64 +19,14 @@ enum class PetType(val label: String, val emoji: String) {
     OTHER("Other", "🐾"),
     ;
 
-    val personalityLines: List<String> get() = when (this) {
-        DOG -> listOf(
-            "I'm hungry again 😋", "Let's go outside! 🐾",
-            "I heard 'walk' — did someone say walk?! 😍",
-            "You're doing great, hooman! 💚",
-            "Belly rubs and treats please! 🥰",
-            "I missed you today 🥺"
-        )
-        CAT -> listOf(
-            "Feed me. Now. 😼", "I might let you pet me today 🐾",
-            "I knocked something off the table. You're welcome. 😏",
-            "Nap time is ALL the time 😴",
-            "I suppose you're acceptable, hooman 💚"
-        )
-        BIRD -> listOf(
-            "Tweet tweet! Feed me seeds! 🌻",
-            "Let me sing you the song of my people! 🎶",
-            "I'm a pretty bird ✨",
-            "Wings up! Great day today! 🐾"
-        )
-        OTHER -> listOf(
-            "I'm special and I know it 🐾",
-            "Care time! Let's go! ✨",
-            "You make every day better 💚",
-            "Tail wags and happy days! 🤗"
-        )
-    }
-
     companion object {
         fun fromString(value: String): PetType =
             entries.firstOrNull { it.label.equals(value, ignoreCase = true) } ?: OTHER
     }
 }
 
-enum class TaskType(
-    val label: String,
-    val successMessage: String,
-    val duplicateWindowHours: Long,
-    val moodMessages: List<String>,
-) {
-    FEED("Feed", "✅ Meal logged!", 4, listOf(
-        "I loved my meal today! 🍖",
-        "Yummy! My tummy is happy 🐾",
-        "That was the best food ever! 😋",
-    )),
-    WALK("Walk", "✅ Walk logged!", 1, listOf(
-        "I loved my walk today 🐾",
-        "The fresh air was amazing! 🌳",
-        "Best walk ever! Let's do it again! 🏃",
-    )),
-    MEDICINE("Medicine", "✅ Medication logged!", 6, listOf(
-        "Medicine taken — I'm staying healthy! 💊",
-        "Thanks for keeping me well! 🩺",
-    )),
-    GROOMING("Grooming", "✅ Grooming logged!", 12, listOf(
-        "I look so fresh and clean! ✨",
-        "Grooming makes me feel amazing! 💅",
-    )),
+enum class TaskType(val label: String) {
+    FEED("Feed"), WALK("Walk"), MEDICINE("Medicine"), GROOMING("Grooming"),
 }
 
 enum class MoodState {
@@ -113,9 +63,10 @@ data class PetEntity(
     val name: String,
     val type: String,
     val breed: String?,
-    val weightKg: Double,
-    val ageYears: Int,
+    val weightKg: Double?,
+    val ageYears: Int?,
     val photoUri: String?,
+    val birthDate: String? = null,
 )
 
 @Entity(
@@ -131,6 +82,8 @@ data class PetEntity(
     indices = [
         Index(value = ["petId"]),
         Index(value = ["petId", "type", "timestamp"], unique = true),
+        Index(value = ["reminderId", "scheduledAt"], unique = true),
+        Index(value = ["timestamp"]),
     ],
 )
 data class ActivityEntity(
@@ -139,6 +92,8 @@ data class ActivityEntity(
     val type: String,
     val timestamp: Long,
     val note: String? = null,
+    val reminderId: Long? = null,
+    val scheduledAt: Long? = null,
 )
 
 @Entity(
@@ -162,6 +117,7 @@ data class ReminderEntity(
     val hour: Int,
     val minute: Int,
     val repeatDays: String,
+    @androidx.room.ColumnInfo(defaultValue = "0") val createdAt: Long = 0,
 )
 
 @Entity(
@@ -197,7 +153,7 @@ data class HealthLogEntity(
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index(value = ["petId"])],
+    indices = [Index(value = ["petId"]), Index(value = ["timestamp"])],
 )
 data class WaterLogEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -256,8 +212,12 @@ data class PetProfile(
     val weightKg: String = "",
     val ageYears: String = "",
     val photoUri: String? = null,
+    val birthDate: String = "",
 ) {
     val petType: PetType get() = PetType.fromString(type)
+    fun ageMonths(today: LocalDate = LocalDate.now()): Long? = birthDate.takeIf { it.isNotBlank() }
+        ?.let { runCatching { java.time.temporal.ChronoUnit.MONTHS.between(LocalDate.parse(it), today) }.getOrNull() }
+        ?.takeIf { it >= 0 }
 }
 
 data class PetActivity(
@@ -266,6 +226,8 @@ data class PetActivity(
     val type: TaskType,
     val timestamp: Long,
     val note: String?,
+    val reminderId: Long? = null,
+    val scheduledAt: Long? = null,
 )
 
 data class Reminder(
@@ -275,6 +237,7 @@ data class Reminder(
     val hour: Int,
     val minute: Int,
     val repeatDays: Set<Int>,
+    val createdAt: Long = 0,
 ) {
     fun timeLabel(): String = LocalTime.of(hour, minute).format(DateTimeFormatter.ofPattern("hh:mm a"))
 }
@@ -366,6 +329,12 @@ data class WeightPoint(
 )
 
 data class SettingsState(
+    val selectedPetId: Long? = null,
+    val analyticsConsent: Boolean = false,
+    val crashConsent: Boolean = false,
+    val serverDeletionPending: Boolean = false,
+    val weightUnit: String = if (java.util.Locale.getDefault().country == "US") "lb" else "kg",
+    val currencyCode: String = runCatching { java.util.Currency.getInstance(java.util.Locale.getDefault()).currencyCode }.getOrDefault("XXX"),
     val isPremium: Boolean = false,
     val adsRemoved: Boolean = false,
     val notificationPromptShown: Boolean = false,
@@ -425,6 +394,7 @@ data class TimelineComputation(
 sealed interface PetSaveResult {
     data class Success(val petId: Long) : PetSaveResult
     data object FreeLimitReached : PetSaveResult
+    data object PhotoError : PetSaveResult
     data object InvalidInput : PetSaveResult
 }
 
@@ -437,6 +407,7 @@ fun ReminderEntity.toDomain(): Reminder? {
         hour = hour.coerceIn(0, 23),
         minute = minute.coerceIn(0, 59),
         repeatDays = repeatDays.parseDays(),
+        createdAt = createdAt,
     )
 }
 
@@ -448,6 +419,8 @@ fun ActivityEntity.toDomain(): PetActivity? {
         type = taskType,
         timestamp = timestamp,
         note = note,
+        reminderId = reminderId,
+        scheduledAt = scheduledAt,
     )
 }
 
@@ -468,14 +441,19 @@ fun PetEntity.toProfile(): PetProfile = PetProfile(
     name = name,
     type = type,
     breed = breed.orEmpty(),
-    weightKg = weightKg.toString(),
-    ageYears = ageYears.toString(),
+    weightKg = weightKg?.toString().orEmpty(),
+    ageYears = ageYears?.toString().orEmpty(),
     photoUri = photoUri,
+    birthDate = birthDate.orEmpty(),
 )
 
 fun PetProfile.toEntity(): PetEntity? {
-    val weight = weightKg.toDoubleOrNull() ?: return null
-    val age = ageYears.toIntOrNull() ?: return null
+    val weight = weightKg.takeIf { it.isNotBlank() }?.toDoubleOrNull()
+    val age = ageYears.takeIf { it.isNotBlank() }?.toIntOrNull()
+    if (weightKg.isNotBlank() && (weight == null || !weight.isFinite() || weight <= 0)) return null
+    if (ageYears.isNotBlank() && (age == null || age < 0 || age > 100)) return null
+    val birthday = birthDate.takeIf { it.isNotBlank() }?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+    if (birthDate.isNotBlank() && (birthday == null || birthday.isAfter(LocalDate.now()))) return null
     if (name.isBlank()) return null
     return PetEntity(
         id = id,
@@ -485,6 +463,7 @@ fun PetProfile.toEntity(): PetEntity? {
         weightKg = weight,
         ageYears = age,
         photoUri = photoUri,
+        birthDate = birthday?.toString(),
     )
 }
 
@@ -495,6 +474,7 @@ fun Reminder.toEntity(): ReminderEntity = ReminderEntity(
     hour = hour,
     minute = minute,
     repeatDays = repeatDays.sorted().joinToString(","),
+    createdAt = createdAt,
 )
 
 fun HealthLog.toEntity(): HealthLogEntity = HealthLogEntity(
@@ -558,21 +538,40 @@ fun computeTimeline(
     activities: List<PetActivity>,
     now: Long,
     zoneId: ZoneId = ZoneId.systemDefault(),
+    date: LocalDate? = null,
 ): TimelineComputation {
-    val today = Instant.ofEpochMilli(now).atZone(zoneId).toLocalDate()
-    val dayNumber = today.dayOfWeek.value
-    val timeline = reminders
-        .filter { reminder -> reminder.repeatDays.isEmpty() || reminder.repeatDays.contains(dayNumber) }
-        .map { reminder ->
-            val scheduledAt = today
-                .atTime(reminder.hour, reminder.minute)
-                .atZone(zoneId)
-                .toInstant()
-                .toEpochMilli()
-            val windowEnd = nextTriggerAt(reminder, scheduledAt, zoneId) ?: scheduledAt + 24 * 60 * 60 * 1000
-            val completion = activities.firstOrNull { activity ->
-                activity.type == reminder.type && activity.timestamp in scheduledAt until windowEnd
-            }
+    val today = date ?: Instant.ofEpochMilli(now).atZone(zoneId).toLocalDate()
+    val earlyWindow = 90 * 60 * 1000L
+    // Include neighbouring dates so an early midnight log cannot also complete yesterday's task.
+    val occurrences = (-1..1).flatMap { offset ->
+        val date = today.plusDays(offset.toLong())
+        reminders.filter { it.repeatDays.isEmpty() || date.dayOfWeek.value in it.repeatDays }
+            .map { it to date.atTime(it.hour, it.minute).atZone(zoneId).toInstant().toEpochMilli() }
+            .filter { (reminder, scheduledAt) -> scheduledAt >= reminder.createdAt }
+    }.sortedWith(compareBy({ it.second }, { it.first.id }))
+    val matched = mutableMapOf<Pair<Long, Long>, PetActivity>()
+    val explicit = activities.filter { it.timestamp <= now && it.reminderId != null && it.scheduledAt != null }
+    explicit.forEach { activity ->
+        occurrences.firstOrNull { (reminder, time) ->
+            reminder.id == activity.reminderId && time == activity.scheduledAt &&
+                reminder.petId == activity.petId && reminder.type == activity.type
+        }?.let { matched[it.first.id to it.second] = activity }
+    }
+    activities.filter { it.timestamp <= now && it.reminderId == null }.sortedBy { it.timestamp }.forEach { activity ->
+        val candidates = occurrences.filter { (reminder, time) ->
+            val next = occurrences.firstOrNull { (other, nextTime) ->
+                other.petId == reminder.petId && other.type == reminder.type && nextTime > time
+            }?.second
+            val end = minOf(time + 24 * 60 * 60 * 1000L, next?.minus(earlyWindow) ?: Long.MAX_VALUE)
+            reminder.petId == activity.petId && reminder.type == activity.type &&
+                activity.timestamp in (time - earlyWindow) until end && (reminder.id to time) !in matched
+        }
+        candidates.minByOrNull { kotlin.math.abs(activity.timestamp - it.second) }
+            ?.let { matched[it.first.id to it.second] = activity }
+    }
+    val timeline = occurrences.filter { (_, time) -> time.toLocalDate(zoneId) == today }
+        .map { (reminder, scheduledAt) ->
+            val completion = matched[reminder.id to scheduledAt]
             TimelineItem(
                 reminder = reminder,
                 scheduledAt = scheduledAt,
@@ -596,13 +595,11 @@ fun computeTimeline(
     )
 }
 
-fun countDailyCareStreak(activities: List<PetActivity>, zoneId: ZoneId = ZoneId.systemDefault()): Int {
-    if (activities.isEmpty()) return 0
-    val activeDays = activities
-        .map { it.timestamp.toLocalDate(zoneId) }
-        .toSet()
+fun countDailyCareStreak(activities: List<PetActivity>, zoneId: ZoneId = ZoneId.systemDefault(), today: LocalDate = LocalDate.now(zoneId)): Int =
+    countCareStreakFromDays(activities.map { it.timestamp.toLocalDate(zoneId) }.toSet(), today)
+
+fun countCareStreakFromDays(activeDays: Set<LocalDate>, today: LocalDate = LocalDate.now()): Int {
     var streak = 0
-    val today = LocalDate.now(zoneId)
     // Start from yesterday if today has no activity yet (don't penalize early morning)
     var cursor = if (activeDays.contains(today)) today else today.minusDays(1)
     while (activeDays.contains(cursor)) {

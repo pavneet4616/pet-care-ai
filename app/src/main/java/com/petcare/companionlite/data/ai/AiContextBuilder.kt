@@ -19,8 +19,9 @@ class AiContextBuilder(
             name = if (settings.aiUseProfile) pet?.name else null,
             species = if (settings.aiUseProfile) pet?.type else null,
             breed = if (settings.aiUseProfile) pet?.breed?.takeIf { it.isNotBlank() } else null,
-            ageYears = if (settings.aiUseProfile) pet?.ageYears else null,
-            weightKg = if (settings.aiUseProfile) pet?.weightKg else null,
+            ageYears = if (settings.aiUseProfile) pet?.ageYears?.takeIf { (it.toIntOrNull() ?: 0) > 0 } else null,
+            ageMonths = if (settings.aiUseProfile) pet?.ageMonths() else null,
+            weightKg = if (settings.aiUseProfile) pet?.weightKg?.takeIf { (it.toDoubleOrNull() ?: 0.0) > 0.0 } else null,
         )
         if (profileOnly) return@runCatching base
 
@@ -40,22 +41,31 @@ class AiContextBuilder(
 
         val feedCount = activities.count { it.type.name == "FEED" }
         val walkCount = activities.count { it.type.name == "WALK" }
+        val medicineCount = activities.count { it.type.name == "MEDICINE" }
         val waterTotal = water.sumOf { it.amountMl }
 
         val summary = buildString {
             if (settings.aiUseActivity) {
                 append("Food: ${if (feedCount > 0) "logged $feedCount times" else "not logged"}; ")
-                append("Walks: $walkCount; ")
-                append("Water: ${if (waterTotal > 0) "${waterTotal}ml" else "normal"}; ")
+                append("Walks: ${if (walkCount > 0) "logged $walkCount times" else "not logged"}; ")
+                append("Medicine given: ${if (medicineCount > 0) "logged $medicineCount times" else "not logged"}; ")
+                append("Water: ${if (water.isNotEmpty()) "${waterTotal}ml logged" else "not logged"}; ")
             }
-            val moods = health.filter { it.category == HealthCategory.MOOD }.take(2)
-            if (moods.isNotEmpty()) append("Mood: ${moods.joinToString { it.note }}; ")
-            else append("Mood: not logged; ")
-            val meds = health.filter { it.category == HealthCategory.VET_VISIT }.take(2)
-            if (meds.isNotEmpty()) append("Vet: ${meds.joinToString { it.note }}; ")
-            else append("Medication: none")
+            if (settings.aiUseHealth) {
+                val moods = health.filter { it.category == HealthCategory.MOOD }.take(2)
+                append("Mood: ${moods.joinToString { it.note }.ifBlank { "not logged" }}; ")
+                val visits = health.filter { it.category == HealthCategory.VET_VISIT }.take(2)
+                append("Vet visits: ${visits.joinToString { it.note }.ifBlank { "not logged" }}; ")
+                val vomit = health.count { it.category == HealthCategory.VOMIT }
+                val symptoms = health.filter { it.category == HealthCategory.SYMPTOM }
+                append("Vomit events logged: $vomit; ")
+                append("Symptoms: ${symptoms.take(3).joinToString { it.note.take(60) }.ifBlank { "not logged" }}; ")
+                val weights = health.filter { it.category == HealthCategory.WEIGHT }
+                    .sortedBy { it.timestamp }.mapNotNull { it.value }
+                if (weights.size >= 2) append("Weight change over logged week: ${weights.last() - weights.first()}kg; ")
+            }
             if (settings.aiUseReminders) append("; reminders: ${reminders.size}")
-        }.take(400)
+        }.take(800)
 
         val recentEvents = health.take(3).map {
             "${it.category.label}: ${it.note.take(60)}"

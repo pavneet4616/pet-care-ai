@@ -21,3 +21,43 @@ android-sdk/
 .dev.vars
 .dev.vars.*
 *.log
+
+# ============================================================================
+# Commit-readiness additions: generated, local-only or secret-bearing files.
+# Entries above are unchanged. Intentionally NOT ignored: app/google-services.json
+# (Firebase client config, not a secret) and gradle/wrapper/gradle-wrapper.jar.
+# ============================================================================
+
+# Heap dumps and additional key-material formats
+*.hprof
+*.p12
+*.pfx
+*.pem
+*.key
+*.p8
+# Android signing passwords and service-account / credential JSON (name-based)
+*keystore*.properties
+*signing*.properties
+*[Ss]ervice*[Aa]ccount*.json
+*credentials*.json
+# Python bytecode caches (tools/.gitignore also covers tools/__pycache__)
+__pycache__/
+*.pyc
+# Local-only Gradle / NDK / Android build outputs
+.cxx/
+.externalNativeBuild/
+*.apk
+*.aab
+# local.properties below the repo root (root copy is covered above)
+**/local.properties
+# Translation-tool failure dumps (localization/.gitignore covers the same)
+*.failed-chunk.json
+# Worker build output, TypeScript incremental cache, coverage
+/worker/dist/
+*.tsbuildinfo
+coverage/
+# OS and editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp

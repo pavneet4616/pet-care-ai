@@ -1,11 +1,14 @@
 package com.petcare.companionlite.notifications
 
 import android.Manifest
+import com.petcare.companionlite.core.inAppLanguage
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.util.Log
+import com.petcare.companionlite.PetCareApplication
+import kotlinx.coroutines.flow.first
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -31,13 +34,15 @@ class AiFollowupWorker(
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
+        val app = applicationContext as PetCareApplication
+        if (!app.container.settingsStore.settings.first().healthFollowUps) return Result.success()
         return try {
             val petId = inputData.getLong(KEY_PET_ID, 0L)
             val petName = inputData.getString(KEY_PET_NAME).orEmpty().ifBlank { "your pet" }
             val eventLabel = inputData.getString(KEY_EVENT).orEmpty().ifBlank { "health event" }
             if (petId == 0L) return Result.success()
 
-            if (ContextCompat.checkSelfPermission(
+            if (android.os.Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(
                     applicationContext,
                     Manifest.permission.POST_NOTIFICATIONS,
                 ) != PackageManager.PERMISSION_GRANTED
@@ -45,8 +50,8 @@ class AiFollowupWorker(
                 return Result.success()
             }
 
-            val prefill = "Yesterday I logged $eventLabel for $petName. " +
-                "Today $petName seems... (Better / Same / Worse — I will describe below)"
+            val localized = applicationContext.inAppLanguage(app.container.settingsStore.settings.first().appLanguageTag)
+            val prefill = localized.getString(R.string.followup_prompt, petName)
             val intent = Intent(applicationContext, MainActivity::class.java).apply {
                 putExtra(EXTRA_OPEN_AI_CHAT, true)
                 putExtra(EXTRA_AI_PET_ID, petId)
@@ -61,8 +66,8 @@ class AiFollowupWorker(
             )
             val notification = NotificationCompat.Builder(applicationContext, NotificationChannels.AI_FOLLOWUP)
                 .setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle("How is $petName feeling today?")
-                .setContentText("You logged $eventLabel yesterday. Tap to update and ask AI.")
+                .setContentTitle(localized.getString(R.string.followup_title, petName))
+                .setContentText(localized.getString(R.string.followup_body))
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .setContentIntent(pending)
                 .setAutoCancel(true)

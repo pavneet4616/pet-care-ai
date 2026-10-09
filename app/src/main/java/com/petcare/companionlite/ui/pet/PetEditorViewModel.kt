@@ -11,6 +11,8 @@ import com.petcare.companionlite.PetCareApplication
 import com.petcare.companionlite.data.model.PetProfile
 import com.petcare.companionlite.data.model.PetSaveResult
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
+import com.petcare.companionlite.core.CareFormats
 
 class PetEditorViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = (application as PetCareApplication).container.repository
@@ -29,7 +31,10 @@ class PetEditorViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             val existing = repository.getPet(petId)
             if (existing != null) {
-                profile = existing
+                val unit = repository.settings.first().weightUnit
+                profile = existing.copy(weightKg = existing.weightKg.toDoubleOrNull()?.let {
+                    java.text.NumberFormat.getNumberInstance().apply { isGroupingUsed = false; maximumFractionDigits = 3 }.format(CareFormats.fromKg(it, unit))
+                }.orEmpty())
                 isEditMode = true
             }
         }
@@ -55,6 +60,8 @@ class PetEditorViewModel(application: Application) : AndroidViewModel(applicatio
         profile = profile.copy(ageYears = value)
     }
 
+    fun updateBirthDate(value: String) { profile = profile.copy(birthDate = value) }
+
     fun updatePhoto(value: String?) {
         // Take persistable URI permission so the photo survives app restart
         if (value != null) {
@@ -73,7 +80,14 @@ class PetEditorViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun savePet() {
         viewModelScope.launch {
-            lastSaveResult = repository.savePet(profile)
+            val unit = repository.settings.first().weightUnit
+            val parsed = CareFormats.parseNumber(profile.weightKg)
+            if (profile.weightKg.isNotBlank() && parsed == null) {
+                lastSaveResult = PetSaveResult.InvalidInput
+                return@launch
+            }
+            val canonical = profile.copy(weightKg = parsed?.let { CareFormats.toKg(it, unit).toString() }.orEmpty())
+            lastSaveResult = runCatching { repository.savePet(canonical) }.getOrDefault(PetSaveResult.InvalidInput)
         }
     }
 

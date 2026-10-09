@@ -1,6 +1,11 @@
 package com.petcare.companionlite.ui.stats
 
-import android.graphics.Color as AndroidColor
+import com.petcare.companionlite.R
+import com.petcare.companionlite.data.model.toDateLabel
+import com.petcare.companionlite.ui.components.weightLabel
+
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -34,14 +39,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.github.mikephil.charting.charts.LineChart
-import com.github.mikephil.charting.components.Description
-import com.github.mikephil.charting.data.Entry
-import com.github.mikephil.charting.data.LineData
-import com.github.mikephil.charting.data.LineDataSet
 import com.petcare.companionlite.ui.theme.Cream
 import com.petcare.companionlite.ui.theme.DeepSage
 import com.petcare.companionlite.ui.theme.Honey
@@ -60,8 +59,8 @@ fun StatsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("${state.pet?.name ?: "Pet"} Stats") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("Back") } },
+                title = { Text(stringResource(R.string.ui_dc78298c12, state.pet?.name ?: "Pet")) },
+                navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.ui_b52b36b726)) } },
             )
         },
     ) { innerPadding ->
@@ -92,17 +91,17 @@ fun StatsScreen(
                     }
                     Text(streakEmoji, style = MaterialTheme.typography.headlineLarge)
                     Text(
-                        "${state.streakDays} Day Streak",
+                        stringResource(R.string.ui_79db3d71b9, state.streakDays),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     val milestoneMsg = when {
-                        state.streakDays >= 30 -> "🏆 Champion! 30+ days of care!"
-                        state.streakDays >= 7  -> "🔥 One week strong! Keep it going!"
-                        state.streakDays >= 3  -> "🟢 3 days in — building a habit!"
-                        state.streakDays > 0   -> "🐾 Great start! Log every day to grow your streak."
-                        else -> "Start your streak by logging care today!"
+                        state.streakDays >= 30 -> stringResource(R.string.ui_b9bf9285c6)
+                        state.streakDays >= 7  -> stringResource(R.string.ui_afa5ccee0a)
+                        state.streakDays >= 3  -> stringResource(R.string.ui_684feeab23)
+                        state.streakDays > 0   -> stringResource(R.string.ui_a42c5a0384)
+                        else -> stringResource(R.string.ui_0c6629aa97)
                     }
                     Text(
                         milestoneMsg,
@@ -111,7 +110,7 @@ fun StatsScreen(
                         fontWeight = FontWeight.SemiBold,
                     )
                     Text(
-                        "${state.totalActivities} total care actions logged",
+                        stringResource(R.string.ui_238b00a90f, state.totalActivities),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
@@ -125,43 +124,27 @@ fun StatsScreen(
                     shape = RoundedCornerShape(22.dp),
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Weight Trend", style = MaterialTheme.typography.titleLarge)
+                        Text(stringResource(R.string.ui_f9e6fe6b07), style = MaterialTheme.typography.titleLarge)
                         Spacer(Modifier.height(8.dp))
-                        AndroidView(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp),
-                            factory = { context ->
-                                LineChart(context).apply {
-                                    description = Description().apply { text = "" }
-                                    axisRight.isEnabled = false
-                                    legend.isEnabled = false
-                                    setTouchEnabled(true)
-                                    setScaleEnabled(false)
-                                    xAxis.setDrawGridLines(false)
-                                    axisLeft.setDrawGridLines(true)
-                                    axisLeft.gridColor = AndroidColor.rgb(221, 239, 224)
-                                }
-                            },
-                            update = { chart ->
-                                val entries = state.points.mapIndexed { index, point ->
-                                    Entry(index.toFloat(), point.value.toFloat())
-                                }
-                                val dataSet = LineDataSet(entries, "Weight").apply {
-                                    color = AndroidColor.rgb(132, 181, 159)
-                                    setCircleColor(AndroidColor.rgb(78, 122, 103))
-                                    lineWidth = 3f
-                                    circleRadius = 4f
-                                    setDrawFilled(true)
-                                    fillColor = AndroidColor.rgb(221, 239, 224)
-                                    mode = LineDataSet.Mode.CUBIC_BEZIER
-                                    setDrawValues(false)
-                                }
-                                chart.data = LineData(dataSet)
-                                // Chart animation (spec requirement)
-                                chart.animateY(1000)
-                            },
-                        )
+                        val ordered = state.points.sortedBy { it.timestamp }
+                        val lineColor = MaterialTheme.colorScheme.primary
+                        androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(180.dp)) {
+                            val low = ordered.minOf { it.value }
+                            val range = (ordered.maxOf { it.value } - low).coerceAtLeast(0.5)
+                            val start = ordered.first().timestamp
+                            val duration = (ordered.last().timestamp - start).coerceAtLeast(1)
+                            val positions = ordered.map {
+                                androidx.compose.ui.geometry.Offset(
+                                    12f + (size.width-24f) * ((it.timestamp-start).toDouble()/duration).toFloat(),
+                                    size.height-12f - (size.height-24f) * ((it.value-low)/range).toFloat())
+                            }
+                            positions.zipWithNext().forEach { (a,b) -> drawLine(lineColor,a,b,4f) }
+                            positions.forEach { drawCircle(lineColor,5f,it) }
+                        }
+                        ordered.takeLast(10).forEach { point ->
+                            Text(point.timestamp.toDateLabel() + " : " + weightLabel(point.value.toString()))
+                        }
+
                     }
                 }
             } else {
@@ -176,9 +159,9 @@ fun StatsScreen(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         Icon(Icons.Filled.BarChart, contentDescription = null, tint = Sage, modifier = Modifier.size(48.dp))
-                        Text("No weight data yet", style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
+                        Text(stringResource(R.string.ui_8eca17da71), style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
                         Text(
-                            "Add weight logs from the pet profile to see weekly and monthly trends.",
+                            stringResource(R.string.ui_13214e2320),
                             textAlign = TextAlign.Center,
                         )
                     }
@@ -211,7 +194,7 @@ fun StatsScreen(
                             modifier = Modifier.padding(18.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            Text("Activity Breakdown", style = MaterialTheme.typography.titleLarge)
+                            Text(stringResource(R.string.ui_214431d6db), style = MaterialTheme.typography.titleLarge)
                             val maxCount = state.taskFrequencies.maxOfOrNull { it.count } ?: 1
                             state.taskFrequencies.forEach { freq ->
                                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -219,8 +202,8 @@ fun StatsScreen(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                     ) {
-                                        Text(freq.type.label)
-                                        Text("${freq.count}×", fontWeight = FontWeight.Bold)
+                                        Text(com.petcare.companionlite.ui.components.taskLabel(freq.type))
+                                        Text(stringResource(R.string.ui_9e5a28324f, freq.count), fontWeight = FontWeight.Bold)
                                     }
                                     LinearProgressIndicator(
                                         progress = { freq.count.toFloat() / maxCount },
@@ -245,9 +228,9 @@ fun StatsScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Icon(Icons.Filled.WorkspacePremium, contentDescription = null, tint = PremiumGold, modifier = Modifier.size(32.dp))
-                        Text("Advanced Stats", style = MaterialTheme.typography.titleLarge)
+                        Text(stringResource(R.string.ui_95d64a3ef0), style = MaterialTheme.typography.titleLarge)
                         Text(
-                            "Upgrade to premium to see activity breakdown, care completion rates, and more.",
+                            stringResource(R.string.ui_082e3c1e1c),
                             textAlign = TextAlign.Center,
                         )
                     }
@@ -256,7 +239,7 @@ fun StatsScreen(
 
             // ── Disclaimer ───────────────────────────────────────
             Text(
-                "Not a substitute for veterinary advice",
+                stringResource(R.string.ui_fe2bdf9779),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                 textAlign = TextAlign.Center,

@@ -115,6 +115,7 @@ fun SettingsScreen(
         .collectAsStateWithLifecycle(initialValue = emptyList())
     val scope = rememberCoroutineScope()
     val store = app.container.settingsStore
+    val privacyOptionsRequired by app.container.adsManager.privacyOptionsRequired.collectAsStateWithLifecycle()
 
     var page by remember { mutableStateOf(SettingsPage.HOME) }
     var showPaywall by remember { mutableStateOf(false) }
@@ -173,6 +174,10 @@ fun SettingsScreen(
                     onContact = { contactSupport(context) },
                     onPrivacyPolicy = { openUrl(context, context.getString(R.string.privacy_policy_url)) },
                     onTerms = { openUrl(context, context.getString(R.string.terms_of_service_url)) },
+                    privacyOptionsRequired = privacyOptionsRequired,
+                    onPrivacyChoices = {
+                        (context as? android.app.Activity)?.let { app.container.adsManager.showPrivacyOptions(it) }
+                    },
                 )
                 SettingsPage.LANGUAGE -> LanguagePage(selected = settings.appLanguageTag) { tag ->
                     scope.launch {
@@ -282,10 +287,12 @@ private fun SettingsHome(
     onContact: () -> Unit,
     onPrivacyPolicy: () -> Unit,
     onTerms: () -> Unit,
+    privacyOptionsRequired: Boolean,
+    onPrivacyChoices: () -> Unit,
 ) {
     SectionLabel(stringResource(R.string.section_general))
     SettingsCard {
-        SettingsRow(Icons.Filled.Language, stringResource(R.string.app_language), AppLocale.displayName(settings.appLanguageTag)) { onOpen(SettingsPage.LANGUAGE) }
+        SettingsRow(Icons.Filled.Language, stringResource(R.string.app_language), if (settings.appLanguageTag.isNullOrBlank()) stringResource(R.string.system_default) else AppLocale.displayName(settings.appLanguageTag)) { onOpen(SettingsPage.LANGUAGE) }
         SettingsRow(Icons.Filled.DarkMode, stringResource(R.string.appearance), themeLabel(settings.themeMode)) { onOpen(SettingsPage.APPEARANCE) }
         SettingsRow(Icons.Filled.Notifications, stringResource(R.string.notifications), stringResource(R.string.notifications_subtitle), showBottomDivider = false) { onOpen(SettingsPage.NOTIFICATIONS) }
     }
@@ -322,7 +329,7 @@ private fun SettingsHome(
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    if (isPro) stringResource(R.string.pro_monthly_active) else stringResource(R.string.pro_card_subtitle),
+                    if (isPro) stringResource(R.string.pro_access_active) else stringResource(R.string.pro_card_subtitle),
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 )
@@ -337,6 +344,9 @@ private fun SettingsHome(
     SectionLabel(stringResource(R.string.section_privacy))
     SettingsCard {
         SettingsRow(Icons.Filled.Lock, stringResource(R.string.privacy)) { onOpen(SettingsPage.PRIVACY) }
+        if (privacyOptionsRequired) {
+            SettingsRow(Icons.Filled.Lock, stringResource(R.string.privacy_choices), onClick = onPrivacyChoices)
+        }
         SettingsRow(Icons.Filled.Lock, stringResource(R.string.privacy_policy), onClick = onPrivacyPolicy)
         SettingsRow(Icons.Filled.Description, stringResource(R.string.terms_of_service), onClick = onTerms)
         SettingsRow(Icons.Filled.MedicalServices, stringResource(R.string.ai_safety), showBottomDivider = false) { onOpen(SettingsPage.SAFETY) }
@@ -366,7 +376,7 @@ private fun LanguagePage(selected: String?, onSelect: (String?) -> Unit) {
     SettingsCard {
         AppLocale.supported.forEachIndexed { index, lang ->
             SettingsRadioRow(
-                title = lang.nativeName,
+                title = if (lang.tag == null) stringResource(R.string.system_default) else lang.nativeName,
                 subtitle = if (lang.tag != null && lang.englishName != lang.nativeName) lang.englishName else null,
                 selected = selected == lang.tag,
                 onClick = { onSelect(lang.tag) },
@@ -378,10 +388,18 @@ private fun LanguagePage(selected: String?, onSelect: (String?) -> Unit) {
 
 @Composable
 private fun AppearancePage(selected: ThemeMode, onSelect: (ThemeMode) -> Unit) {
+    val context = LocalContext.current
+    val store = (context.applicationContext as PetCareApplication).container.settingsStore
+    val settings by store.settings.collectAsStateWithLifecycle(initialValue = SettingsState())
+    val scope = rememberCoroutineScope()
     SettingsCard {
         SettingsRadioRow(stringResource(R.string.system_default), selected = selected == ThemeMode.SYSTEM, onClick = { onSelect(ThemeMode.SYSTEM) })
         SettingsRadioRow(stringResource(R.string.theme_light), selected = selected == ThemeMode.LIGHT, onClick = { onSelect(ThemeMode.LIGHT) })
         SettingsRadioRow(stringResource(R.string.theme_dark), selected = selected == ThemeMode.DARK, onClick = { onSelect(ThemeMode.DARK) }, showBottomDivider = false)
+    }
+    SettingsCard {
+        SettingsRadioRow(stringResource(R.string.unit_kg), selected = settings.weightUnit == "kg", onClick = { scope.launch { store.setWeightUnit("kg") } })
+        SettingsRadioRow(stringResource(R.string.unit_lb), selected = settings.weightUnit == "lb", onClick = { scope.launch { store.setWeightUnit("lb") } }, showBottomDivider = false)
     }
 }
 
@@ -391,22 +409,31 @@ private fun NotificationsPage(
     store: com.petcare.companionlite.data.settings.SettingsStore,
     scope: kotlinx.coroutines.CoroutineScope,
 ) {
+    val context = LocalContext.current
+    val scheduler = (context.applicationContext as PetCareApplication).container.notificationScheduler
+    var exactAllowed by remember { mutableStateOf(scheduler.exactAlarmsAllowed()) }
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        exactAllowed = scheduler.exactAlarmsAllowed()
+        onPauseOrDispose { }
+    }
+    SettingsCard {
+        Text(stringResource(if (exactAllowed) R.string.medication_alarm_precise else R.string.medication_alarm_delayed))
+        if (!exactAllowed && android.os.Build.VERSION.SDK_INT >= 31) {
+            TextButton(onClick = {
+                context.startActivity(Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}")))
+            }) { Text(stringResource(R.string.enable_precise_alarms)) }
+        }
+    }
     SectionLabel(stringResource(R.string.notif_care))
     SettingsCard {
         SettingsSwitchRow(stringResource(R.string.notif_feeding), settings.feedingNotifications) { scope.launch { store.setFeedingNotifications(it) } }
-        SettingsSwitchRow(stringResource(R.string.notif_water), settings.waterNotifications) { scope.launch { store.setWaterNotifications(it) } }
         SettingsSwitchRow(stringResource(R.string.notif_medicine), settings.medicineNotifications) { scope.launch { store.setMedicineNotifications(it) } }
         SettingsSwitchRow(stringResource(R.string.notif_walk), settings.walkNotifications, showBottomDivider = false) { scope.launch { store.setWalkNotifications(it) } }
     }
     SectionLabel(stringResource(R.string.notif_companion))
     SettingsCard {
         SettingsSwitchRow(stringResource(R.string.notif_health), settings.healthFollowUps) { scope.launch { store.setHealthFollowUps(it) } }
-        SettingsSwitchRow(stringResource(R.string.notif_weekly), settings.weeklySummary) { scope.launch { store.setWeeklySummary(it) } }
-        SettingsSwitchRow(stringResource(R.string.notif_streak), settings.streakReminders, showBottomDivider = false) { scope.launch { store.setStreakReminders(it) } }
-    }
-    SectionLabel(stringResource(R.string.notif_ai))
-    SettingsCard {
-        SettingsSwitchRow(stringResource(R.string.notif_daily_tips), settings.dailyAiTips, showBottomDivider = false) { scope.launch { store.setDailyAiTips(it) } }
+        SettingsSwitchRow(stringResource(R.string.notif_weekly), settings.weeklySummary, showBottomDivider = false) { scope.launch { store.setWeeklySummary(it) } }
     }
 }
 
@@ -467,8 +494,11 @@ private fun ChatHistoryPage(
 
 @Composable
 private fun DataPage(onDeleteAll: () -> Unit) {
+    val context=LocalContext.current
+    val settings by (context.applicationContext as PetCareApplication).container.settingsStore.settings.collectAsStateWithLifecycle(initialValue=SettingsState())
     Text(stringResource(R.string.pet_data_local), color = MaterialTheme.colorScheme.onBackground)
     Text(stringResource(R.string.ai_chats_local), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.75f))
+    if (settings.serverDeletionPending) Text(stringResource(R.string.server_deletion_pending))
     SettingsCard {
         SettingsRow(Icons.Filled.Delete, stringResource(R.string.delete_local_data), showBottomDivider = false, onClick = onDeleteAll)
     }
@@ -477,6 +507,9 @@ private fun DataPage(onDeleteAll: () -> Unit) {
 @Composable
 private fun PrivacyPage() {
     val context = LocalContext.current
+    val store=(context.applicationContext as PetCareApplication).container.settingsStore
+    val settings by store.settings.collectAsStateWithLifecycle(initialValue=SettingsState())
+    val scope=rememberCoroutineScope()
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
             stringResource(R.string.privacy_body),
@@ -484,6 +517,8 @@ private fun PrivacyPage() {
             style = MaterialTheme.typography.bodyLarge,
         )
         SettingsCard {
+            SettingsSwitchRow(stringResource(R.string.analytics_optional),settings.analyticsConsent,stringResource(R.string.analytics_optional_body)) { scope.launch { store.setAnalyticsConsent(it) } }
+            SettingsSwitchRow(stringResource(R.string.crash_reports_optional),settings.crashConsent,stringResource(R.string.crash_reports_optional_body)) { scope.launch { store.setCrashConsent(it) } }
             SettingsRow(
                 Icons.Filled.Lock,
                 stringResource(R.string.read_full_privacy_policy),
@@ -499,7 +534,7 @@ private fun PrivacyPage() {
 private fun AboutPage() {
     val context = LocalContext.current
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("🐾 PetCare", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+        Text(stringResource(R.string.ui_adefb758a0), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
         Text(stringResource(R.string.about_tagline), color = MaterialTheme.colorScheme.onBackground)
         Text(stringResource(R.string.version_label, BuildConfig.VERSION_NAME), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f))
         Text(stringResource(R.string.about_made), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f))

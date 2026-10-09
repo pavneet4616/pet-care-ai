@@ -1,6 +1,10 @@
 package com.petcare.companionlite.ui.pet
 
+import com.petcare.companionlite.R
+
 import android.app.Application
+import com.petcare.companionlite.core.inAppLanguage
+import com.petcare.companionlite.core.labelResource
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
@@ -67,17 +71,7 @@ class PetDetailViewModel(
             timeline.isNotEmpty() && timeline.all { it.status == TimelineStatus.COMPLETED } -> MoodState.HAPPY
             else -> MoodState.NEUTRAL
         }
-        val petType = pet?.let { PetType.fromString(it.type) } ?: PetType.OTHER
-        val personalityMsg = if (mood == MoodState.SAD) {
-            when (petType) {
-                PetType.DOG -> "I missed my walk today \uD83D\uDE22"
-                PetType.CAT -> "I'm still waiting for food \uD83D\uDE3E"
-                PetType.BIRD -> "My feeder is empty \uD83D\uDE14"
-                PetType.OTHER -> "${pet?.name ?: "I"} needs some attention \uD83E\uDD7A"
-            }
-        } else {
-            petType.personalityLines.random()
-        }
+        val personalityMsg = app.inAppLanguage().getString(com.petcare.companionlite.R.string.care_record_message, pet?.name.orEmpty())
         PetDetailUiState(
             pet = pet,
             reminders = reminders,
@@ -109,9 +103,12 @@ class PetDetailViewModel(
                 ),
             )
             when (result) {
-                PetRepository.ReminderSaveResult.Success -> onMessage("${taskType.label} reminder set")
+                PetRepository.ReminderSaveResult.Success -> {
+                    app.container.diagnostics.event("reminder_created",taskType.name)
+                    onMessage(app.inAppLanguage().getString(R.string.ui_564e4ea45e, app.inAppLanguage().getString(taskType.labelResource())))
+                }
                 PetRepository.ReminderSaveResult.FreeLimitReached ->
-                    onMessage("Free tier allows ${PetRepository.FREE_REMINDER_LIMIT} reminders per pet. Upgrade to add more.")
+                    onMessage(app.inAppLanguage().getString(R.string.ui_911ff52a8b, PetRepository.FREE_REMINDER_LIMIT))
             }
         }
     }
@@ -132,14 +129,14 @@ class PetDetailViewModel(
     fun deleteHealthLog(logId: Long, onMessage: (String) -> Unit) {
         viewModelScope.launch {
             repository.deleteHealthLog(logId)
-            onMessage("Health log removed")
+            onMessage(app.inAppLanguage().getString(R.string.ui_e2adafc1b0))
         }
     }
 
     fun addHealthLog(category: HealthCategory, note: String, value: Double?, onMessage: (String) -> Unit) {
         viewModelScope.launch {
             repository.addHealthLog(petId, category, note, value)
-            onMessage("${category.label} saved")
+            onMessage(app.inAppLanguage().getString(R.string.ui_fa4eedd21a, app.inAppLanguage().getString(category.labelResource())))
         }
     }
 
@@ -156,12 +153,13 @@ class PetDetailViewModel(
                 healthLogs = state.healthLogs,
                 weightPoints = weightPoints,
                 streakDays = streakDays,
+                weightUnit = state.settings.weightUnit,
             )
             if (uri != null) {
                 app.container.pdfExportManager.shareReport(uri)
-                onMessage("Report generated and ready to share")
+                onMessage(app.inAppLanguage().getString(R.string.ui_4a11f24b29))
             } else {
-                onMessage("Could not generate the report")
+                onMessage(app.inAppLanguage().getString(R.string.ui_726839c8f5))
             }
         }
     }

@@ -1,5 +1,11 @@
 package com.petcare.companionlite.ui.components
 
+import com.petcare.companionlite.R
+
+import androidx.compose.ui.res.stringResource
+
+import com.petcare.companionlite.core.petPhotoModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.view.ViewGroup
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -63,7 +69,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -107,13 +113,13 @@ fun PetCard(item: PetDashboardItem, onClick: () -> Unit) {
             PetPhotoOrAvatar(pet = item.pet, mood = item.mood, modifier = Modifier.size(88.dp))
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(
-                    "${item.pet.petType.emoji} ${item.pet.name}",
+                    stringResource(R.string.ui_78c505fe4e, item.pet.petType.emoji, item.pet.name),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    item.greetingLine.ifBlank { item.pet.breed.ifBlank { "Your best friend" } },
+                    item.greetingLine.ifBlank { item.pet.breed.ifBlank { stringResource(R.string.ui_46238ae1be) } },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f)
                 )
@@ -126,7 +132,7 @@ fun PetCard(item: PetDashboardItem, onClick: () -> Unit) {
                 // Pet personality voice — makes app feel alive
                 if (item.personalityMessage.isNotBlank()) {
                     Text(
-                        "\"${item.personalityMessage}\"",
+                        stringResource(R.string.ui_d1394e67e3, item.personalityMessage),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
                         fontWeight = FontWeight.Normal
@@ -163,8 +169,8 @@ fun PetCard(item: PetDashboardItem, onClick: () -> Unit) {
 fun PetPhotoOrAvatar(pet: PetProfile, mood: MoodState, modifier: Modifier = Modifier) {
     if (pet.photoUri != null) {
         AsyncImage(
-            model = pet.photoUri,
-            contentDescription = "${pet.name} photo",
+            model = androidx.compose.ui.platform.LocalContext.current.petPhotoModel(pet.photoUri),
+            contentDescription = stringResource(R.string.ui_4e1af604ac, pet.name),
             modifier = modifier
                 .clip(RoundedCornerShape(24.dp))
                 .background(Blush),
@@ -453,7 +459,7 @@ fun TaskActionChip(taskType: TaskType, onClick: () -> Unit) {
     )
     AssistChip(
         onClick = onClick,
-        label = { Text(taskType.label) },
+        label = { Text(com.petcare.companionlite.ui.components.taskLabel(taskType)) },
         leadingIcon = { Icon(taskIcon(taskType), contentDescription = null, modifier = Modifier.size(18.dp)) },
         modifier = Modifier.scale(scale),
         interactionSource = interactionSource,
@@ -485,7 +491,7 @@ fun QuickLogCard(taskType: TaskType, onClick: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Icon(taskIcon(taskType), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
-            Text(taskType.label, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+            Text(com.petcare.companionlite.ui.components.taskLabel(taskType), fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
@@ -508,7 +514,7 @@ fun ReminderActionCard(taskType: TaskType, selected: Boolean, onClick: () -> Uni
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Icon(taskIcon(taskType), contentDescription = null, tint = contentColor, modifier = Modifier.size(24.dp))
-            Text(taskType.label, fontWeight = FontWeight.Bold, color = contentColor, style = MaterialTheme.typography.bodyMedium)
+            Text(com.petcare.companionlite.ui.components.taskLabel(taskType), fontWeight = FontWeight.Bold, color = contentColor, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
@@ -523,10 +529,10 @@ fun TimePickerDialogWrapper(
     AlertDialog(
         onDismissRequest = onDismissRequest,
         dismissButton = {
-            TextButton(onClick = onDismissRequest) { Text("Cancel") }
+            TextButton(onClick = onDismissRequest) { Text(stringResource(R.string.ui_77dfd2135f)) }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) { Text("OK") }
+            TextButton(onClick = onConfirm) { Text(stringResource(R.string.ui_9ce3bd4224)) }
         },
         text = {
             TimePicker(state = state)
@@ -549,10 +555,10 @@ fun TimelineCard(item: TimelineItem, onLogNow: () -> Unit) {
         TimelineStatus.MISSED    -> Icons.Filled.Warning
     }
     val statusLabel = when (item.status) {
-        TimelineStatus.COMPLETED -> "✅ Completed at ${item.matchedActivity?.timestamp?.toTimeLabel().orEmpty()}"
-        TimelineStatus.PENDING   -> "⏰ Scheduled for today"
-        TimelineStatus.OVERDUE   -> "⚠️ Overdue — tap to log now"
-        TimelineStatus.MISSED    -> "❌ Missed window"
+        TimelineStatus.COMPLETED -> stringResource(R.string.ui_17cd91a7ad, item.matchedActivity?.timestamp?.toTimeLabel().orEmpty())
+        TimelineStatus.PENDING   -> stringResource(R.string.ui_c90341fee7)
+        TimelineStatus.OVERDUE   -> stringResource(R.string.ui_0fa251c1f3)
+        TimelineStatus.MISSED    -> stringResource(R.string.ui_62e50884f4)
     }
 
     Card(
@@ -578,7 +584,7 @@ fun TimelineCard(item: TimelineItem, onLogNow: () -> Unit) {
             }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
-                    "${item.reminder.type.label} — ${item.scheduledAt.toTimeLabel()}",
+                    stringResource(R.string.ui_53861d6315, com.petcare.companionlite.ui.components.taskLabel(item.reminder.type), item.scheduledAt.toTimeLabel()),
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -611,10 +617,13 @@ fun HealthLogCard(title: String, subtitle: String) {
 
 @Composable
 fun AdBanner(enabled: Boolean) {
-    if (!enabled) return
-
     val context = LocalContext.current
-    val bannerWidthDp = LocalConfiguration.current.screenWidthDp
+    val app = context.applicationContext as com.petcare.companionlite.PetCareApplication
+    val adsAllowed by app.container.adsManager.adsAllowed.collectAsStateWithLifecycle()
+    if (!enabled || !adsAllowed) return
+
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+    val bannerWidthDp = maxWidth.value.toInt().coerceAtLeast(1)
     val adaptiveAdSize = remember(context, bannerWidthDp) {
         AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, bannerWidthDp)
     }
@@ -642,6 +651,7 @@ fun AdBanner(enabled: Boolean) {
             .padding(top = 8.dp),
         factory = { adView },
     )
+    }
 }
 
 @Composable
@@ -656,9 +666,9 @@ fun TimelineEmptyState() {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Icon(Icons.Filled.Pets, contentDescription = null, tint = Sage, modifier = Modifier.size(40.dp))
-            Text("No reminders set yet", style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
+            Text(stringResource(R.string.ui_cf047f8761), style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
             Text(
-                "Add a reminder above to start building your pet's daily timeline and care streak.",
+                stringResource(R.string.ui_b1bd80c635),
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.bodyLarge,
             )
@@ -712,7 +722,7 @@ fun CelebrationOverlay(
                     modifier = Modifier.graphicsLayer { scaleX = bounce; scaleY = bounce },
                 )
                 Text(
-                    if (allDone) "$petName is happy ❤️" else message,
+                    if (allDone) stringResource(R.string.ui_946feb858f, petName) else message,
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.Black,
                     color = androidx.compose.ui.graphics.Color.White,
@@ -720,7 +730,7 @@ fun CelebrationOverlay(
                 )
                 if (allDone) {
                     Text(
-                        "Perfect day!",
+                        stringResource(R.string.ui_46a0c3cdf1),
                         style = MaterialTheme.typography.titleLarge,
                         color = Honey,
                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
@@ -728,7 +738,7 @@ fun CelebrationOverlay(
                 }
                 if (streakDays > 0) {
                     Text(
-                        "🔥 ${streakDays}-day streak",
+                        stringResource(R.string.ui_5615decc68, streakDays),
                         style = MaterialTheme.typography.titleMedium,
                         color = Sage,
                         fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,

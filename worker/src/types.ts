@@ -1,19 +1,9 @@
 // Shared types for the Pet Companion AI Worker.
 
-export interface Env {
-  AI: Ai;
-  AI_QUOTA: DurableObjectNamespace;
-  CONFIG: KVNamespace;
-  MODEL: string;
-  FREE_DAILY: string;
-  LIFETIME_DAILY: string;
-  PRO_DAILY: string;
-  BONUS_DAILY: string;
-  MAX_TOKENS: string;
-  PLAY_PACKAGE_NAME: string;
-  AI_WEEKLY_SKU: string;
-  AI_MONTHLY_SKU?: string;
+export interface Env extends CloudflareBindings {
   GOOGLE_SERVICE_ACCOUNT_JSON?: string;
+  INTEGRITY_REQUIRED?: string;
+  REPORTS_ADMIN_TOKEN?: string;
 }
 
 export type Tier = "free" | "lifetime" | "pro";
@@ -28,6 +18,7 @@ export interface PetContext {
   species?: string;
   breed?: string;
   ageYears?: number | string;
+  ageMonths?: number;
   weightKg?: number | string;
   summary7d?: string;
   overdue?: string[];
@@ -59,6 +50,7 @@ export interface QuotaSnapshot {
   used: number;
   remaining: number;
   bonusRemaining: number;
+  bonusReady?: boolean;
   resetAt: string;
 }
 
@@ -67,6 +59,7 @@ export interface ReserveResult {
   allowed: boolean;
   quota: QuotaSnapshot;
   consumeBonus?: boolean;
+  reason?: string;
 }
 
 export type ReportCategory = "unsafe" | "incorrect" | "offensive" | "other";

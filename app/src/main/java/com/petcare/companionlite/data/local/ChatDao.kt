@@ -47,6 +47,8 @@ interface ChatSessionDao {
 
 @Dao
 interface ChatMessageDao {
+    @Query("UPDATE chat_messages SET status = 'FAILED', errorCode = 'INTERRUPTED' WHERE sessionId = :sessionId AND status = 'SENDING' AND createdAt < :cutoff")
+    suspend fun failInterruptedMessages(sessionId: Long, cutoff: Long)
     @Query("SELECT * FROM chat_messages WHERE sessionId = :sessionId ORDER BY createdAt ASC LIMIT :limit")
     fun observeForSession(sessionId: Long, limit: Int = 60): Flow<List<ChatMessageEntity>>
 

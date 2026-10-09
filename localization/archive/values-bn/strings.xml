@@ -1,0 +1,28 @@
+<resources>
+    <string name="settings">সেটিংস</string>
+    <string name="nav_dashboard">ড্যাশবোর্ড</string>
+    <string name="nav_tools">টুলস</string>
+    <string name="nav_emergency">জরুরি</string>
+    <string name="nav_settings">সেটিংস</string>
+    <string name="app_language">অ্যাপের ভাষা</string>
+    <string name="appearance">চেহারা</string>
+    <string name="theme_light">লাইট</string>
+    <string name="theme_dark">ডার্ক</string>
+    <string name="upgrade_to_pro">PetCare Pro নিন</string>
+    <string name="ask_ai_about">%1$s সম্পর্কে AI-কে জিজ্ঞাসা করুন</string>
+    <string name="greeting_morning">শুভ সকাল</string>
+    <string name="greeting_afternoon">শুভ অপরাহ্ন</string>
+    <string name="greeting_evening">শুভ সন্ধ্যা</string>
+    <string name="greeting_night">শুভ রাত্রি</string>
+    <string name="pet_needs_you">%1$s-এর আপনার দরকার</string>
+    <string name="maybe_later">পরে</string>
+    <string name="privacy_choices">বিজ্ঞাপনের গোপনীয়তার বিকল্প</string>
+    <string name="pro_access_active">Pro অ্যাক্সেস সক্রিয়</string>
+    <string name="cancel_in_play">সাবস্ক্রিপশন স্বয়ংক্রিয়ভাবে নবায়ন হয়। Google Play-তে যেকোনো সময় বাতিল করুন।</string>
+    <string name="care_reminder_title">%1$s-এর যত্নের অনুস্মারক</string>
+    <string name="care_reminder_body">যত্নের কাজ: %1$s। আপনার পোষ্যের যত্নের নথি খুলতে ট্যাপ করুন।</string>
+    <string name="care_feed">খাওয়ানো</string>
+    <string name="care_walk">হাঁটানো</string>
+    <string name="care_medicine">ওষুধ দেওয়া</string>
+    <string name="care_grooming">পরিচর্যা ও পরিষ্কার</string>
+</resources>

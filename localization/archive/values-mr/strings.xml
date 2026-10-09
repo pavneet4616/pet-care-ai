@@ -1,0 +1,28 @@
+<resources>
+    <string name="settings">सेटिंग्ज</string>
+    <string name="nav_dashboard">डॅशबोर्ड</string>
+    <string name="nav_tools">टूल्स</string>
+    <string name="nav_emergency">आणीबाणी</string>
+    <string name="nav_settings">सेटिंग्ज</string>
+    <string name="app_language">अॅपची भाषा</string>
+    <string name="appearance">देखावा</string>
+    <string name="theme_light">लाइट</string>
+    <string name="theme_dark">डार्क</string>
+    <string name="upgrade_to_pro">PetCare Pro घ्या</string>
+    <string name="ask_ai_about">%1$s बद्दल AI ला विचारा</string>
+    <string name="greeting_morning">शुभ प्रभात</string>
+    <string name="greeting_afternoon">शुभ दुपार</string>
+    <string name="greeting_evening">शुभ संध्याकाळ</string>
+    <string name="greeting_night">शुभ रात्री</string>
+    <string name="pet_needs_you">%1$s ला तुमची गरज आहे</string>
+    <string name="maybe_later">नंतर</string>
+    <string name="privacy_choices">जाहिरात गोपनीयता पर्याय</string>
+    <string name="pro_access_active">Pro प्रवेश सक्रिय आहे</string>
+    <string name="cancel_in_play">सदस्यता आपोआप नूतनीकरण होते. Google Play मध्ये कधीही रद्द करा.</string>
+    <string name="care_reminder_title">%1$s च्या देखभालीची आठवण</string>
+    <string name="care_reminder_body">देखभालीचे काम: %1$s. पाळीव प्राण्याची देखभाल नोंद उघडण्यासाठी टॅप करा.</string>
+    <string name="care_feed">खाऊ घालणे</string>
+    <string name="care_walk">फिरायला नेणे</string>
+    <string name="care_medicine">औषध देणे</string>
+    <string name="care_grooming">स्वच्छता आणि निगा</string>
+</resources>

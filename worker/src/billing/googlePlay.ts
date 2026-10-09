@@ -26,13 +26,13 @@ function base64url(data: ArrayBuffer | string): string {
   return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
-async function getAccessToken(sa: ServiceAccount): Promise<string> {
+export async function getAccessToken(sa: ServiceAccount, scope = "https://www.googleapis.com/auth/androidpublisher"): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const header = base64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
   const claim = base64url(
     JSON.stringify({
       iss: sa.client_email,
-      scope: "https://www.googleapis.com/auth/androidpublisher",
+      scope,
       aud: "https://oauth2.googleapis.com/token",
       exp: now + 3600,
       iat: now,
@@ -50,6 +50,7 @@ async function getAccessToken(sa: ServiceAccount): Promise<string> {
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
+    signal: AbortSignal.timeout(15_000),
     body: new URLSearchParams({
       grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
       assertion,
@@ -67,7 +68,7 @@ const ENTITLED_V2_STATES = new Set([
 ]);
 
 export type SubscriptionVerifyResult =
-  | { status: "active"; expiryTimeMillis: number; autoRenewing?: boolean; productId?: string }
+  | { status: "active"; expiryTimeMillis: number; autoRenewing?: boolean; productId?: string; accountId?: string; linkedPurchaseToken?: string }
   | { status: "inactive"; expiryTimeMillis?: number }
   | { status: "error"; message: string };
 
@@ -82,6 +83,8 @@ export function parseSubscriptionV2(
   json: {
     subscriptionState?: string;
     lineItems?: Array<{ productId?: string; expiryTime?: string }>;
+    externalAccountIdentifiers?: {obfuscatedExternalAccountId?: string};
+    linkedPurchaseToken?: string;
   },
   now = Date.now(),
 ): SubscriptionVerifyResult {
@@ -93,7 +96,7 @@ export function parseSubscriptionV2(
   // Some test records omit subscriptionState but still have a future expiry.
   const entitledByExpiry = !state && expiryTimeMillis > now;
   if (entitledByState || entitledByExpiry) {
-    return { status: "active", expiryTimeMillis, productId };
+    return { status: "active", expiryTimeMillis, productId, accountId: json.externalAccountIdentifiers?.obfuscatedExternalAccountId, linkedPurchaseToken: json.linkedPurchaseToken };
   }
   return { status: "inactive", expiryTimeMillis };
 }
@@ -103,6 +106,7 @@ export function parseSubscriptionV1(
     expiryTimeMillis?: string;
     autoRenewing?: boolean;
     paymentState?: number;
+    obfuscatedExternalAccountId?: string;
   },
   now = Date.now(),
 ): SubscriptionVerifyResult {
@@ -112,7 +116,7 @@ export function parseSubscriptionV1(
   const paid =
     json.paymentState === undefined || json.paymentState === 1 || json.paymentState === 2;
   if (paid && expiry > now) {
-    return { status: "active", expiryTimeMillis: expiry, autoRenewing: json.autoRenewing };
+    return { status: "active", expiryTimeMillis: expiry, autoRenewing: json.autoRenewing, accountId: json.obfuscatedExternalAccountId };
   }
   return { status: "inactive", expiryTimeMillis: expiry };
 }
@@ -142,22 +146,26 @@ export async function verifySubscription(
     const v2Url =
       `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}` +
       `/purchases/subscriptionsv2/tokens/${encodeURIComponent(purchaseToken)}`;
-    const v2 = await fetch(v2Url, { headers: auth });
+    const v2 = await fetch(v2Url, { headers: auth, signal: AbortSignal.timeout(15_000) });
     if (v2.ok) {
-      return parseSubscriptionV2((await v2.json()) as Parameters<typeof parseSubscriptionV2>[0]);
+      const result = parseSubscriptionV2((await v2.json()) as Parameters<typeof parseSubscriptionV2>[0]);
+      if (result.status === "active" && (!result.productId || !extraSkus.includes(result.productId))) {
+        return { status: "error", message: "Unsupported subscription product" };
+      }
+      return result;
     }
     if (v2.status === 401 || v2.status === 403) {
       console.warn(JSON.stringify({ type: "play_verify", api: "v2", status: v2.status }));
       return { status: "error", message: `play v2 ${v2.status}` };
     }
 
-    const skus = uniqueSkus([subscriptionId, ...extraSkus]);
+    const skus = uniqueSkus([subscriptionId, ...extraSkus]).filter((sku) => extraSkus.includes(sku));
     let lastStatus = v2.status;
     for (const sku of skus) {
       const v1Url =
         `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}` +
         `/purchases/subscriptions/${sku}/tokens/${encodeURIComponent(purchaseToken)}`;
-      const v1 = await fetch(v1Url, { headers: auth });
+      const v1 = await fetch(v1Url, { headers: auth, signal: AbortSignal.timeout(15_000) });
       lastStatus = v1.status;
       if (v1.ok) {
         return parseSubscriptionV1((await v1.json()) as Parameters<typeof parseSubscriptionV1>[0]);
@@ -168,8 +176,8 @@ export async function verifySubscription(
     if (lastStatus === 404) return { status: "inactive" };
     return { status: "error", message: `play ${lastStatus}` };
   } catch (err) {
-    console.error(JSON.stringify({ type: "play_verify_error", err: String(err) }));
-    return { status: "error", message: String(err) };
+    console.error(JSON.stringify({ type: "play_verify_error" }));
+    return { status: "error", message: "Play verification temporarily unavailable" };
   }
 }
 
@@ -184,8 +192,9 @@ export async function verifyOneTimeProduct(
   const url =
     `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${packageName}` +
     `/purchases/products/${productId}/tokens/${encodeURIComponent(purchaseToken)}`;
-  const res = await fetch(url, { headers: { authorization: `Bearer ${token}` } });
-  if (!res.ok) return false;
+  const res = await fetch(url, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15_000) });
+  if (res.status === 404 || res.status === 410) return false;
+  if (!res.ok) throw new Error(`Play product verification temporarily unavailable (${res.status})`);
   const json = (await res.json()) as { purchaseState?: number };
   return json.purchaseState === 0; // 0 = purchased
 }

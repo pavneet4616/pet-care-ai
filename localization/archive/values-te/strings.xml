@@ -1,0 +1,28 @@
+<resources>
+    <string name="settings">సెట్టింగ్‌లు</string>
+    <string name="nav_dashboard">డాష్‌బోర్డ్</string>
+    <string name="nav_tools">టూల్స్</string>
+    <string name="nav_emergency">అత్యవసరం</string>
+    <string name="nav_settings">సెట్టింగ్‌లు</string>
+    <string name="app_language">యాప్ భాష</string>
+    <string name="appearance">రూపం</string>
+    <string name="theme_light">లైట్</string>
+    <string name="theme_dark">డార్క్</string>
+    <string name="upgrade_to_pro">PetCare Pro తీసుకోండి</string>
+    <string name="ask_ai_about">%1$s గురించి AIని అడగండి</string>
+    <string name="greeting_morning">శుభోదయం</string>
+    <string name="greeting_afternoon">శుభ మధ్యాహ్నం</string>
+    <string name="greeting_evening">శుభ సాయంత్రం</string>
+    <string name="greeting_night">శుభ రాత్రి</string>
+    <string name="pet_needs_you">%1$sకి మీరు కావాలి</string>
+    <string name="maybe_later">తర్వాత</string>
+    <string name="privacy_choices">ప్రకటనల గోప్యత ఎంపికలు</string>
+    <string name="pro_access_active">Pro యాక్సెస్ సక్రియంగా ఉంది</string>
+    <string name="cancel_in_play">సభ్యత్వాలు స్వయంచాలకంగా పునరుద్ధరించబడతాయి. Google Playలో ఎప్పుడైనా రద్దు చేయవచ్చు.</string>
+    <string name="care_reminder_title">%1$s సంరక్షణ రిమైండర్</string>
+    <string name="care_reminder_body">సంరక్షణ పని: %1$s. మీ పెంపుడు జంతువు సంరక్షణ రికార్డును తెరవడానికి నొక్కండి.</string>
+    <string name="care_feed">ఆహారం పెట్టడం</string>
+    <string name="care_walk">నడక</string>
+    <string name="care_medicine">మందు ఇవ్వడం</string>
+    <string name="care_grooming">శుభ్రత మరియు సంరక్షణ</string>
+</resources>

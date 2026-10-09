@@ -1,5 +1,9 @@
 package com.petcare.companionlite.ui.dashboard
 
+import com.petcare.companionlite.R
+
+import androidx.compose.ui.res.stringResource
+
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -65,7 +69,7 @@ fun TodayTimelineSection(
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
-                "Today",
+                stringResource(R.string.ui_24345a1437),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -163,7 +167,7 @@ private fun TimelineRow(
         // Task label
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                "$taskEmoji ${item.reminder.type.label}",
+                stringResource(R.string.ui_78c505fe4e, taskEmoji, com.petcare.companionlite.ui.components.taskLabel(item.reminder.type)),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = if (isCompleted) FontWeight.Normal else FontWeight.SemiBold,
                 color = if (isCompleted)

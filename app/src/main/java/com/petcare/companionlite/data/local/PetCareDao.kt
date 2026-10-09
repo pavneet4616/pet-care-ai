@@ -43,6 +43,14 @@ interface PetDao {
 
 @Dao
 interface ActivityDao {
+    @Query("SELECT * FROM activities WHERE petId = :petId AND timestamp >= :sinceMillis ORDER BY timestamp DESC")
+    fun observeForPetSince(petId: Long, sinceMillis: Long): Flow<List<ActivityEntity>>
+    @Query("SELECT * FROM activities WHERE timestamp >= :sinceMillis ORDER BY timestamp DESC")
+    fun observeSince(sinceMillis: Long): Flow<List<ActivityEntity>>
+
+    // A single integer per active day preserves arbitrarily long streaks without loading each log.
+    @Query("SELECT petId, date(timestamp / 1000, 'unixepoch', 'localtime') AS day FROM activities GROUP BY petId, day ORDER BY day DESC")
+    fun observeCareDays(): Flow<List<CareDay>>
     @Query("SELECT * FROM activities ORDER BY timestamp DESC")
     fun observeAll(): Flow<List<ActivityEntity>>
 
@@ -62,8 +70,12 @@ interface ActivityDao {
     suspend fun getActivitiesSince(sinceMillis: Long): List<ActivityEntity>
 }
 
+data class CareDay(val petId: Long, val day: String)
+
 @Dao
 interface ReminderDao {
+    @Query("SELECT COUNT(*) FROM reminders")
+    fun observeCount(): Flow<Int>
     @Query("SELECT * FROM reminders ORDER BY hour, minute")
     fun observeAll(): Flow<List<ReminderEntity>>
 
@@ -103,6 +115,8 @@ interface HealthLogDao {
 
 @Dao
 interface WaterLogDao {
+    @Query("SELECT * FROM water_logs WHERE timestamp >= :sinceMillis ORDER BY timestamp DESC")
+    fun observeSince(sinceMillis: Long): Flow<List<WaterLogEntity>>
     @Query("SELECT * FROM water_logs WHERE petId = :petId ORDER BY timestamp DESC")
     fun observeForPet(petId: Long): Flow<List<WaterLogEntity>>
 

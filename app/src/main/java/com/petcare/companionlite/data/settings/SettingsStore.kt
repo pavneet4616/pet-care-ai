@@ -16,11 +16,20 @@ import kotlinx.coroutines.flow.map
 private val Context.dataStore by preferencesDataStore(name = "petcare_settings")
 
 class SettingsStore(private val context: Context) {
+    private val identity = com.petcare.companionlite.core.InstallationIdentity(context)
+    private val identityInitializedKey = booleanPreferencesKey("identity_initialized")
     private val premiumKey = booleanPreferencesKey("premium_enabled")
     private val adsRemovedKey = booleanPreferencesKey("ads_removed")
     private val notificationPromptShownKey = booleanPreferencesKey("notification_prompt_shown")
     private val onboardingCompletedKey = booleanPreferencesKey("onboarding_completed")
     private val installationIdKey = stringPreferencesKey("installation_id")
+    private val selectedPetKey = androidx.datastore.preferences.core.longPreferencesKey("selected_pet_id")
+    private val lifetimeTokenKey = stringPreferencesKey("lifetime_purchase_token")
+    private val weightUnitKey = stringPreferencesKey("weight_unit")
+    private val analyticsConsentKey = booleanPreferencesKey("analytics_consent")
+    private val crashConsentKey = booleanPreferencesKey("crash_consent")
+    private val deletionPendingKey = booleanPreferencesKey("server_deletion_pending")
+    private val reviewAttemptKey = androidx.datastore.preferences.core.longPreferencesKey("review_last_attempt")
     private val aiWeeklyProKey = booleanPreferencesKey("ai_weekly_pro")
     private val aiProExpiryKey = androidx.datastore.preferences.core.longPreferencesKey("ai_pro_expiry")
     private val aiPurchaseTokenKey = stringPreferencesKey("ai_purchase_token")
@@ -52,6 +61,12 @@ class SettingsStore(private val context: Context) {
     val settings: Flow<SettingsState> = context.dataStore.data.map { prefs ->
         SettingsState(
             isPremium = prefs[premiumKey] ?: false,
+            selectedPetId = prefs[selectedPetKey],
+            analyticsConsent = prefs[analyticsConsentKey] ?: false,
+            crashConsent = prefs[crashConsentKey] ?: false,
+            serverDeletionPending = prefs[deletionPendingKey] ?: false,
+            weightUnit = prefs[weightUnitKey] ?: if (android.content.res.Resources.getSystem().configuration.locales[0].country == "US") "lb" else "kg",
+            currencyCode = runCatching { java.util.Currency.getInstance(android.content.res.Resources.getSystem().configuration.locales[0]).currencyCode }.getOrDefault("XXX"),
             adsRemoved = prefs[adsRemovedKey] ?: false,
             notificationPromptShown = prefs[notificationPromptShownKey] ?: false,
             onboardingCompleted = prefs[onboardingCompletedKey] ?: false,
@@ -101,11 +116,81 @@ class SettingsStore(private val context: Context) {
     }
 
     suspend fun getOrCreateInstallationId(): String {
-        val prefs = context.dataStore.data.first()
-        prefs[installationIdKey]?.takeIf { it.isNotBlank() }?.let { return it }
-        val fresh = java.util.UUID.randomUUID().toString()
-        context.dataStore.edit { it[installationIdKey] = fresh }
-        return fresh
+        val current=context.dataStore.data.first()
+        val actual=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { identity.get(current[installationIdKey], current[identityInitializedKey] ?: false).first }
+        val updated = context.dataStore.edit {
+            it[installationIdKey] = actual
+            it[identityInitializedKey] = true
+        }
+        return requireNotNull(updated[installationIdKey])
+    }
+    suspend fun installationSecret(): String {
+        val id=getOrCreateInstallationId()
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { identity.get(id,true).second }
+    }
+
+    suspend fun selectPet(id: Long) { context.dataStore.edit { it[selectedPetKey] = id } }
+    suspend fun setAnalyticsConsent(enabled: Boolean) { context.dataStore.edit { it[analyticsConsentKey] = enabled } }
+    suspend fun setCrashConsent(enabled: Boolean) { context.dataStore.edit { it[crashConsentKey] = enabled } }
+    suspend fun setDeletionPending(pending:Boolean) { context.dataStore.edit { it[deletionPendingKey]=pending } }
+    suspend fun claimReviewAttempt(): Boolean {
+        var claimed=false
+        context.dataStore.edit {
+            val last=it[reviewAttemptKey]
+            val now=System.currentTimeMillis()
+            if (last == null || now-last >= 90L*24*60*60*1000) { it[reviewAttemptKey]=now;claimed=true }
+        }
+        return claimed
+    }
+    suspend fun setWeightUnit(unit: String) { require(unit in setOf("kg", "lb")); context.dataStore.edit { it[weightUnitKey] = unit } }
+    suspend fun setLifetimeToken(token: String?) { context.dataStore.edit { if (token == null) it.remove(lifetimeTokenKey) else it[lifetimeTokenKey] = token } }
+    suspend fun getLifetimeToken(): String? = context.dataStore.data.first()[lifetimeTokenKey]
+    suspend fun clearPersonalData() {
+        context.dataStore.edit {
+            val installation = it[installationIdKey]
+            it.clear()
+            // Retain only the anonymous anti-abuse identity. Deleting care data must not reset quotas.
+            if (installation != null) it[installationIdKey] = installation
+            it[identityInitializedKey] = true
+            it[deletionPendingKey] = true
+        }
+    }
+
+    /** Publish a whole Play snapshot atomically; ignore a superseded query. */
+    internal suspend fun applyBillingSnapshot(
+        owned: com.petcare.companionlite.monetization.BillingEntitlements,
+        stillCurrent: () -> Boolean,
+    ) {
+        context.dataStore.edit { prefs ->
+            if (!stillCurrent()) return@edit
+            prefs[premiumKey] = owned.lifetimeToken != null
+            prefs[adsRemovedKey] = owned.adsRemoved
+            if (owned.lifetimeToken == null) prefs.remove(lifetimeTokenKey)
+            else prefs[lifetimeTokenKey] = owned.lifetimeToken
+            val subscription = owned.subscription
+            prefs[aiWeeklyProKey] = subscription != null
+            if (subscription == null) {
+                prefs.remove(aiPurchaseTokenKey)
+                prefs.remove(aiSubscriptionIdKey)
+                prefs[aiProExpiryKey] = 0L
+            } else {
+                if (prefs[aiPurchaseTokenKey] != subscription.token) prefs[aiProExpiryKey] = 0L
+                prefs[aiPurchaseTokenKey] = subscription.token
+                prefs[aiSubscriptionIdKey] = requireNotNull(owned.subscriptionId)
+            }
+        }
+    }
+
+    suspend fun applyVerifiedExpiry(token: String, expiryMillis: Long): Boolean {
+        var applied = false
+        context.dataStore.edit {
+            if (it[aiPurchaseTokenKey] == token) {
+                it[aiWeeklyProKey] = true
+                it[aiProExpiryKey] = expiryMillis
+                applied = true
+            }
+        }
+        return applied
     }
 
     suspend fun setAiWeeklyPro(enabled: Boolean, expiryMillis: Long = 0L) {

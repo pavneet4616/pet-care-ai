@@ -1,5 +1,9 @@
 package com.petcare.companionlite.ui.pet
 
+import com.petcare.companionlite.core.inAppLanguage
+
+import com.petcare.companionlite.R
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.content.Context
@@ -42,7 +46,7 @@ data class ToolsHubUiState(
 @OptIn(ExperimentalCoroutinesApi::class)
 class ToolsHubViewModel(
     private val repository: PetRepository,
-    private val appContext: Context? = null,
+    private val appContext: Context,
 ) : ViewModel() {
 
     private val _message = MutableStateFlow<String?>(null)
@@ -97,7 +101,7 @@ class ToolsHubViewModel(
                     timestamp = System.currentTimeMillis()
                 )
             )
-            _message.value = "💧 ${amountMl}ml logged!"
+            _message.value = appContext.inAppLanguage().getString(R.string.ui_90ed3b2b7f, amountMl)
         }
     }
 
@@ -109,7 +113,7 @@ class ToolsHubViewModel(
                 value = 0.0,
                 note = "$moodEmoji $note".trim()
             )
-            _message.value = "$moodEmoji Mood logged!"
+            _message.value = appContext.inAppLanguage().getString(R.string.ui_2b3fab2036, moodEmoji)
             // Sick/sad moods get a next-morning AI check-in.
             if (moodEmoji in SICK_MOODS) {
                 scheduleFollowup(petId, "low mood ($moodEmoji)")
@@ -125,7 +129,7 @@ class ToolsHubViewModel(
                 value = null,
                 note = note
             )
-            _message.value = "🤢 Vomit incident recorded"
+            _message.value = appContext.inAppLanguage().getString(R.string.ui_b0298cf6b2)
             scheduleFollowup(petId, "vomiting")
         }
     }
@@ -155,7 +159,7 @@ class ToolsHubViewModel(
     fun deleteNote(id: Long) {
         viewModelScope.launch {
             repository.deleteNote(id)
-            _message.value = "Note deleted"
+            _message.value = appContext.inAppLanguage().getString(R.string.ui_788d82fb2f)
         }
     }
 
@@ -171,21 +175,21 @@ class ToolsHubViewModel(
                     timestamp = System.currentTimeMillis()
                 )
             )
-            _message.value = "💰 $${"%.2f".format(amount)} expense logged!"
+            _message.value = appContext.inAppLanguage().getString(R.string.ui_cbcdb86a6a, "%.2f".format(amount))
         }
     }
 
     fun deleteWaterLog(id: Long) {
         viewModelScope.launch {
             repository.deleteWaterLog(id)
-            _message.value = "Water log removed"
+            _message.value = appContext.inAppLanguage().getString(R.string.ui_1f0416964e)
         }
     }
 
     fun deleteExpense(id: Long) {
         viewModelScope.launch {
             repository.deleteExpense(id)
-            _message.value = "Expense removed"
+            _message.value = appContext.inAppLanguage().getString(R.string.ui_4bcf227234)
         }
     }
 
@@ -210,12 +214,7 @@ class ToolsHubViewModel(
         fun formatTimestamp(timestamp: Long): String {
             val now = System.currentTimeMillis()
             val diff = now - timestamp
-            return when {
-                diff < 60_000 -> "Just now"
-                diff < 3_600_000 -> "${diff / 60_000}m ago"
-                diff < 86_400_000 -> "${diff / 3_600_000}h ago"
-                else -> SimpleDateFormat("MMM d, h:mm a", Locale.getDefault()).format(Date(timestamp))
-            }
+            return java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM,java.text.DateFormat.SHORT).format(Date(timestamp))
         }
     }
 }

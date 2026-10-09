@@ -1,5 +1,11 @@
 package com.petcare.companionlite.ui.pet
 
+import com.petcare.companionlite.R
+import com.petcare.companionlite.ui.components.weightLabel
+import com.petcare.companionlite.ui.components.ageLabel
+
+import androidx.compose.ui.res.stringResource
+
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -78,6 +84,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -109,6 +116,7 @@ fun PetDetailScreen(
     onMessage: (String) -> Unit,
     viewModel: PetDetailViewModel = viewModel(),
 ) {
+    val context = LocalContext.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val view = LocalView.current
 
@@ -142,16 +150,16 @@ fun PetDetailScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete ${state.pet?.name ?: "Pet"}?") },
-            text = { Text("This will permanently remove this pet and all their care history.") },
+            title = { Text(stringResource(R.string.ui_137cdc2d7f, state.pet?.name ?: "Pet")) },
+            text = { Text(stringResource(R.string.ui_49d87c506b)) },
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteDialog = false
                     viewModel.deletePet { onBack() }
-                }) { Text("Delete", color = Coral) }
+                }) { Text(stringResource(R.string.ui_f6fdbe48dc), color = Coral) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showDeleteDialog = false }) { Text(stringResource(R.string.ui_77dfd2135f)) }
             },
         )
     }
@@ -174,15 +182,15 @@ fun PetDetailScreen(
                     .padding(bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                Text("Set a Routine", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.ui_defb4d7e80), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Text(
-                    "Pick the care type and time — we'll remind you every day automatically.",
+                    stringResource(R.string.ui_08d8a00f3d),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                 )
 
                 // Task selection grid
-                Text("Care Type", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.ui_261fd8c633), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -198,7 +206,7 @@ fun PetDetailScreen(
                 }
 
                 // Time picker card
-                Text("Reminder Time", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.ui_18e5b40b9f), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 val formattedTime = LocalTime.of(timePickerState.hour, timePickerState.minute)
                     .format(DateTimeFormatter.ofPattern("h:mm a"))
                 Card(
@@ -218,16 +226,16 @@ fun PetDetailScreen(
                         ) {
                             Icon(Icons.Filled.AccessTime, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                             Column {
-                                Text("Remind me at", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                                Text(stringResource(R.string.ui_23ff37cc4b), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
                                 Text(formattedTime, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             }
                         }
-                        TextButton(onClick = { showTimePicker = true }) { Text("Change") }
+                        TextButton(onClick = { showTimePicker = true }) { Text(stringResource(R.string.ui_64fbd995d3)) }
                     }
                 }
 
                 // Repeat modes
-                Text("Repeat", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.ui_659eba1219), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("Daily", "Weekdays", "Weekends").forEachIndexed { index, label ->
                         val isActive = repeatMode == index
@@ -254,14 +262,14 @@ fun PetDetailScreen(
                         }
                         view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                         viewModel.addReminder(selectedTask, timePickerState.hour, timePickerState.minute, repeatDays) { resultMsg ->
-                            onMessage(if (resultMsg.contains("tier allows")) resultMsg else "⏰ ${selectedTask.label} reminder set for $formattedTime")
+                            onMessage(resultMsg)
                         }
                         showAddReminderSheet = false
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text("Set Reminder", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.ui_20fac06f98), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -274,15 +282,15 @@ fun PetDetailScreen(
                     title = { Text(state.pet?.name ?: "", fontWeight = FontWeight.Bold) },
                     navigationIcon = {
                         TextButton(onClick = onBack) {
-                            Text("← Back", color = MaterialTheme.colorScheme.primary)
+                            Text(stringResource(R.string.ui_c32ae9f4a7), color = MaterialTheme.colorScheme.primary)
                         }
                     },
                     actions = {
                         IconButton(onClick = { state.pet?.id?.let(onEditPet) }) {
-                            Icon(Icons.Filled.Edit, contentDescription = "Edit pet")
+                            Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.ui_3efb5fd9ec))
                         }
                         IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(Icons.Filled.Delete, contentDescription = "Delete pet", tint = Coral)
+                            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.ui_e5cd3ab69b), tint = Coral)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -293,7 +301,7 @@ fun PetDetailScreen(
             floatingActionButton = {
                 ExtendedFloatingActionButton(
                     onClick = { showAddReminderSheet = true },
-                    text = { Text("Add Reminder", fontWeight = FontWeight.SemiBold) },
+                    text = { Text(stringResource(R.string.ui_9d1c0460dd), fontWeight = FontWeight.SemiBold) },
                     icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                     shape = RoundedCornerShape(16.dp),
                 )
@@ -333,7 +341,7 @@ fun PetDetailScreen(
                                     )
                                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                         Text(
-                                            "${pet.petType.emoji} ${pet.name}",
+                                            stringResource(R.string.ui_78c505fe4e, pet.petType.emoji, pet.name),
                                             style = MaterialTheme.typography.headlineMedium,
                                             fontWeight = FontWeight.Black,
                                             color = Color.White
@@ -341,16 +349,16 @@ fun PetDetailScreen(
                                         // Personality line first — makes it feel alive
                                         if (state.personalityMessage.isNotBlank()) {
                                             Text(
-                                                "\"${state.personalityMessage}\"",
+                                                stringResource(R.string.ui_d1394e67e3, state.personalityMessage),
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = Honey,
                                                 fontWeight = FontWeight.SemiBold
                                             )
                                         } else {
                                             val moodLabel = when (state.mood) {
-                                                com.petcare.companionlite.data.model.MoodState.HAPPY -> "Feeling great 😊"
-                                                com.petcare.companionlite.data.model.MoodState.NEUTRAL -> "Doing okay 🐾"
-                                                com.petcare.companionlite.data.model.MoodState.SAD -> "Needs some love 🥺"
+                                                com.petcare.companionlite.data.model.MoodState.HAPPY -> stringResource(R.string.tasks_complete)
+                                                com.petcare.companionlite.data.model.MoodState.NEUTRAL -> stringResource(R.string.tasks_pending)
+                                                com.petcare.companionlite.data.model.MoodState.SAD -> stringResource(R.string.tasks_overdue)
                                             }
                                             Text(
                                                 moodLabel,
@@ -361,7 +369,7 @@ fun PetDetailScreen(
                                         }
                                         val ageDouble = pet.ageYears.toDoubleOrNull() ?: 0.0
                                         Text(
-                                            "${pet.weightKg} kg · ${pet.ageYears} yr${if (ageDouble != 1.0) "s" else ""}",
+                                            weightLabel(pet.weightKg) + " / " + ageLabel(pet),
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = Color.White.copy(alpha = 0.7f)
                                         )
@@ -374,7 +382,7 @@ fun PetDetailScreen(
 
                 // ── 2. Quick Log ─────────────────────────────────────
                 item {
-                    Text("What did ${state.pet?.name ?: "your pet"} do?", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.ui_fa35cc0639, state.pet?.name ?: "your pet"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 }
                 item {
                     Row(
@@ -406,7 +414,7 @@ fun PetDetailScreen(
                         ) {
                             Icon(Icons.Filled.Handyman, null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Care Tools")
+                            Text(stringResource(R.string.ui_01df9def1d))
                         }
                         
                         OutlinedButton(
@@ -414,7 +422,7 @@ fun PetDetailScreen(
                             modifier = Modifier.weight(1f).height(50.dp),
                             shape = RoundedCornerShape(14.dp)
                         ) {
-                            Text("📊 Stats")
+                            Text(stringResource(R.string.ui_ba9f99b6c1))
                         }
                     }
                 }
@@ -428,18 +436,18 @@ fun PetDetailScreen(
                             ) {
                                 Icon(Icons.Filled.PictureAsPdf, null, modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("Export Medical Report")
+                                Text(stringResource(R.string.ui_f5f0b87a05))
                             }
                         } else {
                             OutlinedButton(
-                                onClick = { onMessage("Upgrade to Premium to export PDF reports") },
+                                onClick = { onMessage(context.getString(R.string.report_upgrade)) },
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = PremiumGold),
                                 modifier = Modifier.fillMaxWidth().height(50.dp),
                                 shape = RoundedCornerShape(14.dp)
                             ) {
                                 Icon(Icons.Filled.WorkspacePremium, null, modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("Export Medical Report")
+                                Text(stringResource(R.string.ui_f5f0b87a05))
                             }
                         }
                     }
@@ -447,7 +455,7 @@ fun PetDetailScreen(
 
                 // ── 4. Reminders / Timeline ──────────────────────────
                 item {
-                    Text("${state.pet?.name ?: "Your pet"}'s Daily Routine", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.ui_8d6f61f6bc, state.pet?.name ?: "Your pet"), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 }
 
                 if (state.timeline.isEmpty() && state.reminders.isEmpty()) {
@@ -465,14 +473,14 @@ fun PetDetailScreen(
                             ) {
                                 Text("🐾", style = MaterialTheme.typography.displayMedium)
                                 Text(
-                                    "${state.pet?.name ?: "Your pet"} doesn't have a routine yet",
+                                    stringResource(R.string.ui_866e2f1877, state.pet?.name ?: "Your pet"),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     textAlign = TextAlign.Center,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    "Let's build healthy habits together — daily feeding, walks, and medicine reminders create a loving routine.",
+                                    stringResource(R.string.ui_7fb7e4998e),
                                     textAlign = TextAlign.Center,
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
@@ -484,7 +492,7 @@ fun PetDetailScreen(
                                 ) {
                                     Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Set First Routine", fontWeight = FontWeight.SemiBold)
+                                    Text(stringResource(R.string.ui_cdf4f71945), fontWeight = FontWeight.SemiBold)
                                 }
                             }
                         }
@@ -505,7 +513,7 @@ fun PetDetailScreen(
                 item {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Not a substitute for veterinary advice",
+                        stringResource(R.string.ui_fe2bdf9779),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                         textAlign = TextAlign.Center,
@@ -568,7 +576,7 @@ fun QuickLogAnimatedCard(taskType: TaskType, onClick: (String) -> Unit) {
                 modifier = Modifier.size(24.dp)
             )
             Text(
-                taskType.label,
+                com.petcare.companionlite.ui.components.taskLabel(taskType),
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,

@@ -1,5 +1,9 @@
 package com.petcare.companionlite.ui.report
 
+import com.petcare.companionlite.R
+
+import androidx.compose.ui.res.stringResource
+
 import android.app.Application
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
@@ -101,7 +105,7 @@ class WeeklyReportViewModel(application: Application) : AndroidViewModel(applica
                 .atStartOfDay(zoneId).toInstant().toEpochMilli()
 
             val pets = repository.getAllPets()
-            val allActivities = repository.getActivitiesSince(weekStartMillis - 7 * 24 * 60 * 60 * 1000L) // Support 14 day trend
+            val allActivities = repository.getActivitiesSince(LocalDate.now(zoneId).minusDays(13).atStartOfDay(zoneId).toInstant().toEpochMilli()) // Support 14 day trend
             val allReminders = repository.getAllReminders()
             val isPremium = repository.settings.first().hasFullAccess
 
@@ -117,6 +121,7 @@ class WeeklyReportViewModel(application: Application) : AndroidViewModel(applica
                     activities = petActivities,
                     reminders = petReminders,
                     zoneId = zoneId,
+                    context = app,
                 )
             }
 
@@ -143,10 +148,10 @@ fun WeeklyReportScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Weekly Report", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.ui_1e41a8f690), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     TextButton(onClick = onBack) {
-                        Text("← Back", color = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(R.string.ui_c32ae9f4a7), color = MaterialTheme.colorScheme.primary)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -160,7 +165,7 @@ fun WeeklyReportScreen(
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Loading report…", style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.ui_53284c7e03), style = MaterialTheme.typography.bodyLarge)
             }
         } else if (state.reports.isEmpty()) {
             Box(
@@ -173,17 +178,17 @@ fun WeeklyReportScreen(
                 ) {
                     Text("🐾", style = MaterialTheme.typography.displayLarge)
                     Text(
-                        "No data yet",
+                        stringResource(R.string.ui_8c48f89bdb),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        "Add a pet and start logging care to see your weekly report.",
+                        stringResource(R.string.ui_d74af11b57),
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
                     Button(onClick = onBack, shape = RoundedCornerShape(14.dp)) {
-                        Text("Go to Dashboard")
+                        Text(stringResource(R.string.ui_f7b5bf8cef))
                     }
                 }
             }
@@ -225,7 +230,7 @@ fun WeeklyReportScreen(
                         ) {
                             Icon(Icons.Filled.Share, null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Share Report", fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.ui_ead1994747), fontWeight = FontWeight.SemiBold)
                         }
                     }
 
@@ -233,8 +238,8 @@ fun WeeklyReportScreen(
                     if (!state.isPremium) {
                         item(key = "trends_${report.petName}") {
                             LockedFeatureCard(
-                                title = "Detailed Insights",
-                                description = "Track patterns, trends, and improve consistency",
+                                title = stringResource(R.string.ui_631642b1c2),
+                                description = stringResource(R.string.ui_641a352a37),
                                 onClick = onBuyPremium
                             )
                         }
@@ -251,7 +256,7 @@ fun WeeklyReportScreen(
                             ) {
                                 Icon(Icons.Filled.TrendingUp, null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(8.dp))
-                                Text("View Detailed Trends", fontWeight = FontWeight.SemiBold)
+                                Text(stringResource(R.string.ui_b9c8abca06), fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
@@ -264,14 +269,14 @@ fun WeeklyReportScreen(
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         shape = RoundedCornerShape(16.dp)
                     ) {
-                        Text("Keep Going 💚", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.ui_3dad8dfd54), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
                 }
 
                 item {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Report based on the last 7 days of activity",
+                        stringResource(R.string.ui_0f9723ea17),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                         textAlign = TextAlign.Center,
@@ -315,7 +320,7 @@ private fun ReportHeadlineCard(report: WeeklyReport) {
                     )
                     Column {
                         Text(
-                            "${report.petName}'s Week",
+                            stringResource(R.string.ui_2ba34f0243, report.petName),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Black,
                             color = Color.White
@@ -347,25 +352,25 @@ private fun ReportStatsRow(report: WeeklyReport) {
         StatMiniCard(
             emoji = "✔",
             value = "${report.tasksCompleted}",
-            label = "Completed",
+            label = stringResource(R.string.ui_1798b3ba42),
             modifier = Modifier.weight(1f)
         )
         StatMiniCard(
             emoji = "🔥",
             value = "${report.bestStreak}",
-            label = "Best Streak",
+            label = stringResource(R.string.ui_3b03fa8122),
             modifier = Modifier.weight(1f)
         )
         StatMiniCard(
             emoji = "📅",
             value = "${report.daysActive}",
-            label = "Active Days",
+            label = stringResource(R.string.ui_0ebfff45ec),
             modifier = Modifier.weight(1f)
         )
         StatMiniCard(
             emoji = "📉",
             value = "${report.missedTasks}",
-            label = "Missed",
+            label = stringResource(R.string.ui_b564001a58),
             modifier = Modifier.weight(1f)
         )
     }
@@ -430,7 +435,7 @@ private fun ConsistencyScoreCard(report: WeeklyReport) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Consistency Score",
+                    stringResource(R.string.ui_4c4624ce1a),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold
                 )
@@ -444,7 +449,7 @@ private fun ConsistencyScoreCard(report: WeeklyReport) {
                 textAlign = TextAlign.Center
             )
             Text(
-                "You showed up ${report.daysActive} out of 7 days",
+                stringResource(R.string.ui_1bc87f95fc, report.daysActive),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                 modifier = Modifier.fillMaxWidth(),
@@ -493,7 +498,7 @@ private fun NextWeekGoalCard(report: WeeklyReport) {
             }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    "Next Week",
+                    stringResource(R.string.ui_fdc2b827d9),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
@@ -530,7 +535,7 @@ private fun PremiumUpsellCard(report: WeeklyReport, onBuyPremium: () -> Unit) {
                     modifier = Modifier.size(22.dp)
                 )
                 Text(
-                    report.premiumUpsell.split("\n").firstOrNull() ?: "Unlock Premium",
+                    report.premiumUpsell.split("\n").firstOrNull() ?: stringResource(R.string.ui_30149b30ab),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -542,7 +547,7 @@ private fun PremiumUpsellCard(report: WeeklyReport, onBuyPremium: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.75f)
             )
             Text(
-                "Unlock trends, insights, and PDF exports",
+                stringResource(R.string.ui_84b7c3d1d4),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f)
             )
@@ -551,7 +556,7 @@ private fun PremiumUpsellCard(report: WeeklyReport, onBuyPremium: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 shape = RoundedCornerShape(14.dp)
             ) {
-                Text("Unlock Premium", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.ui_30149b30ab), fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -580,7 +585,7 @@ private fun LockedFeatureCard(title: String, description: String, onClick: () ->
             ) {
                 Icon(
                     Icons.Filled.Lock,
-                    contentDescription = "Locked",
+                    contentDescription = stringResource(R.string.ui_a798882f1c),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                 )
             }

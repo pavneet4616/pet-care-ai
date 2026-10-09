@@ -14,21 +14,17 @@ object AppLocale {
     val supported = listOf(
         SupportedLanguage(null, "System default", "System default"),
         SupportedLanguage("en", "English", "English"),
-        SupportedLanguage("hi", "हिन्दी", "Hindi"),
-        SupportedLanguage("pa", "ਪੰਜਾਬੀ", "Punjabi"),
-        SupportedLanguage("es", "Español", "Spanish"),
-        SupportedLanguage("pt", "Português", "Portuguese"),
-        SupportedLanguage("fr", "Français", "French"),
         SupportedLanguage("de", "Deutsch", "German"),
-        SupportedLanguage("ar", "العربية", "Arabic"),
-        SupportedLanguage("bn", "বাংলা", "Bengali"),
-        SupportedLanguage("ta", "தமிழ்", "Tamil"),
-        SupportedLanguage("te", "తెలుగు", "Telugu"),
-        SupportedLanguage("mr", "मराठी", "Marathi"),
+        SupportedLanguage("fr", "Fran\u00e7ais", "French"),
+        SupportedLanguage("es", "Espa\u00f1ol", "Spanish"),
+        SupportedLanguage("it", "Italiano", "Italian"),
+        SupportedLanguage("pt-BR", "Portugu\u00eas (Brasil)", "Brazilian Portuguese"),
+        SupportedLanguage("nl", "Nederlands", "Dutch"),
+        SupportedLanguage("ja", "\u65e5\u672c\u8a9e", "Japanese"),
     )
 
     fun setAppLanguage(languageTag: String?) {
-        val locales = if (languageTag.isNullOrBlank()) {
+        val locales = if (languageTag.isNullOrBlank() || supported.none { it.tag == languageTag }) {
             LocaleListCompat.getEmptyLocaleList()
         } else {
             LocaleListCompat.forLanguageTags(languageTag)

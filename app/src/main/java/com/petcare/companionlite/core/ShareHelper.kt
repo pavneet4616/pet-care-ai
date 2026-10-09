@@ -1,5 +1,6 @@
 package com.petcare.companionlite.core
 
+import com.petcare.companionlite.R
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -15,6 +16,7 @@ import java.io.FileOutputStream
 
 object ShareHelper {
     fun shareWeeklyReport(context: Context, report: WeeklyReport) {
+        val strings = context.inAppLanguage()
         val width = 800
         val height = 800
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
@@ -45,21 +47,28 @@ object ShareHelper {
             textAlign = Paint.Align.CENTER
         }
 
+        // Fit translated labels and user names within the square share card.
+        fun drawFitted(text: String, x: Float, y: Float, paint: Paint) {
+            val size = paint.textSize
+            if (paint.measureText(text) > 680f) paint.textSize = size * 680f / paint.measureText(text)
+            canvas.drawText(text, x, y, paint)
+            paint.textSize = size
+        }
         // Draw Content
-        canvas.drawText("${report.petName}'s Weekly Report", width / 2f, 150f, titlePaint)
+        drawFitted(strings.getString(R.string.weekly_pet_headline, report.petName), width / 2f, 150f, titlePaint)
 
         var y = 300f
         val startX = 150f
         val lineSpacing = 80f
 
-        canvas.drawText("${report.tasksCompleted} tasks completed", startX, y, textPaint)
+        drawFitted(strings.getString(R.string.report_tasks,report.tasksCompleted), startX, y, textPaint)
         y += lineSpacing
-        canvas.drawText("${report.bestStreak}-day streak", startX, y, textPaint)
+        drawFitted(strings.getString(R.string.report_streak,report.bestStreak), startX, y, textPaint)
         y += lineSpacing
-        canvas.drawText("${report.daysActive} days active", startX, y, textPaint)
+        drawFitted(strings.getString(R.string.report_active_days,report.daysActive), startX, y, textPaint)
 
         // Branding
-        canvas.drawText("Built with PetCare Companion Lite", width / 2f, height - 80f, brandPaint)
+        drawFitted(strings.getString(R.string.report_brand), width / 2f, height - 80f, brandPaint)
 
         // Save to cache and share
         try {
@@ -84,12 +93,14 @@ object ShareHelper {
                 // Fallback text
                 putExtra(
                     Intent.EXTRA_TEXT,
-                    "${report.petName} Weekly Report\n${report.tasksCompleted} tasks completed\nBuilt with PetCare Companion Lite",
+                    strings.getString(R.string.report_share_text,report.petName,report.tasksCompleted),
                 )
             }
-            context.startActivity(Intent.createChooser(shareIntent, "Share Report"))
+            context.startActivity(Intent.createChooser(shareIntent, strings.getString(R.string.report_share)))
         } catch (e: Exception) {
             Log.e("ShareHelper", "Failed to share weekly report", e)
+        } finally {
+            bitmap.recycle()
         }
     }
 }

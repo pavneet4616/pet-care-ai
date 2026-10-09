@@ -1,0 +1,20 @@
+export const envVars = {
+  "MODEL": "@cf/qwen/qwen3-30b-a3b-fp8",
+  "FREE_DAILY": "5",
+  "LIFETIME_DAILY": "10",
+  "PRO_DAILY": "20",
+  "BONUS_DAILY": "1",
+  "MAX_TOKENS": "500",
+  "PLAY_PACKAGE_NAME": "com.petcares.companionlites",
+  "AI_WEEKLY_SKU": "ai_weekly_pass",
+  "AI_MONTHLY_SKU": "ai_monthly_pass",
+  "PLAY_CLOUD_PROJECT_NUMBER": "138551758971",
+  "PLAY_SIGNING_DIGESTS": "rRklt_7HaC1LeOQcYfIO6DB2bpVBMQiJV2jjxgTVql4",
+  "ADMOB_REWARDED_UNIT": "3416986503",
+  "RTDN_SERVICE_ACCOUNT_EMAIL": "pet-companion@ai-pdf-chat-497609.iam.gserviceaccount.com",
+  "RTDN_AUDIENCE": "https://pet-companion-ai.neetpav46.workers.dev/v1/billing/google/rtdn",
+  "INTEGRITY_MODE": "enforce",
+  "INTEGRITY_MIN_VERSION_CODE": "11",
+  "LEGACY_IP_DAILY_LIMIT": "25",
+  "LEGACY_GLOBAL_DAILY_LIMIT": "500"
+} as const;

@@ -1,5 +1,10 @@
 package com.petcare.companionlite.ui.onboarding
 
+import com.petcare.companionlite.R
+
+import androidx.compose.ui.res.stringResource
+
+import com.petcare.companionlite.core.petPhotoModel
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -97,33 +102,46 @@ fun OnboardingScreen(
     var petName by remember { mutableStateOf("") }
     var petBreed by remember { mutableStateOf("") }
     var petWeight by remember { mutableStateOf("") }
-    var petAge by remember { mutableStateOf("") }
+    var petBirthDate by remember { mutableStateOf("") }
     var photoUri by remember { mutableStateOf<String?>(null) }
     var savedPetId by remember { mutableStateOf(0L) }
+
+    var saving by remember { mutableStateOf(false) }
+    var saveError by remember { mutableStateOf<String?>(null) }
+    val weightUnit = com.petcare.companionlite.ui.components.LocalWeightUnit.current
 
     // Reminder data
     val timePickerState = rememberTimePickerState(initialHour = 8, initialMinute = 0, is24Hour = false)
 
     val photoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri: Uri? ->
+        uri?.let {
+            runCatching { context.contentResolver.takePersistableUriPermission(it, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        }
         photoUri = uri?.toString()
     }
 
     // Save pet at step 4 (after photo), create reminder at step 5
     fun savePetAndProceed() {
+        if (saving) return
+        saving = true
         scope.launch {
             val profile = PetProfile(
                 id = 0,
-                name = petName.trim().ifBlank { "My Pet" },
+                name = petName.trim().ifBlank { context.getString(R.string.ui_f08cf0fe15) },
                 type = petType.label,
                 breed = petBreed.trim(),
-                weightKg = petWeight.trim().ifBlank { "0" },
-                ageYears = petAge.trim().ifBlank { "0" },
+                weightKg = com.petcare.companionlite.core.CareFormats.parseNumber(petWeight)?.let { com.petcare.companionlite.core.CareFormats.toKg(it, weightUnit).toString() }.orEmpty(),
+                birthDate = petBirthDate.trim(),
                 photoUri = photoUri,
             )
-            val result = repository.savePet(profile)
+            val result = if (petWeight.isNotBlank() && com.petcare.companionlite.core.CareFormats.parseNumber(petWeight) == null) com.petcare.companionlite.data.model.PetSaveResult.InvalidInput else runCatching { repository.savePet(profile) }.getOrDefault(com.petcare.companionlite.data.model.PetSaveResult.InvalidInput)
+            saving = false
             if (result is com.petcare.companionlite.data.model.PetSaveResult.Success) {
                 savedPetId = result.petId
                 step = 4 // Move to reminder step
+                saveError = null
+            } else {
+                saveError = context.getString(if (result == com.petcare.companionlite.data.model.PetSaveResult.PhotoError) R.string.photo_save_failed else R.string.invalid_pet_details)
             }
         }
     }
@@ -157,6 +175,7 @@ fun OnboardingScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
+        saveError?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp)) }
         // Progress bar (hidden on welcome & congrats)
         if (step in 1..4) {
             LinearProgressIndicator(
@@ -192,16 +211,16 @@ fun OnboardingScreen(
                     name = petName,
                     breed = petBreed,
                     weight = petWeight,
-                    age = petAge,
+                    age = petBirthDate,
                     onNameChange = { petName = it },
                     onBreedChange = { petBreed = it },
                     onWeightChange = { petWeight = it },
-                    onAgeChange = { petAge = it },
+                    onAgeChange = { petBirthDate = it },
                     petType = petType,
                     onNext = { step = 3 }
                 )
                 3 -> PhotoStep(
-                    petName = petName.ifBlank { "your pet" },
+                    petName = petName.ifBlank { stringResource(R.string.ui_5ec089c9b1) },
                     photoUri = photoUri,
                     onPickPhoto = {
                         photoLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
@@ -210,7 +229,7 @@ fun OnboardingScreen(
                     onSkip = { savePetAndProceed() }
                 )
                 4 -> ReminderStep(
-                    petName = petName.ifBlank { "your pet" },
+                    petName = petName.ifBlank { stringResource(R.string.ui_5ec089c9b1) },
                     timePickerState = timePickerState,
                     onNext = { saveReminderAndFinish() },
                     onSkip = {
@@ -218,7 +237,7 @@ fun OnboardingScreen(
                     }
                 )
                 5 -> CongratsStep(
-                    petName = petName.ifBlank { "your pet" },
+                    petName = petName.ifBlank { stringResource(R.string.ui_5ec089c9b1) },
                     petType = petType,
                     onFinish = { finishOnboarding() }
                 )
@@ -249,7 +268,7 @@ private fun WelcomeStep(onNext: () -> Unit) {
         )
         Spacer(Modifier.height(24.dp))
         Text(
-            "Welcome to PetCare",
+            stringResource(R.string.ui_5a6c406b47),
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Black,
             color = MaterialTheme.colorScheme.onBackground,
@@ -257,7 +276,7 @@ private fun WelcomeStep(onNext: () -> Unit) {
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            "Let's set up your first companion ❤️",
+            stringResource(R.string.ui_cbe0d45dd3),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f),
             textAlign = TextAlign.Center,
@@ -269,7 +288,7 @@ private fun WelcomeStep(onNext: () -> Unit) {
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Sage)
         ) {
-            Text("Get Started", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.ui_bd2cb05177), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
         }
     }
 }
@@ -289,7 +308,7 @@ private fun PetTypeStep(
     ) {
         Spacer(Modifier.height(32.dp))
         Text(
-            "What kind of pet do you have?",
+            stringResource(R.string.ui_aa185a5a19),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
@@ -323,7 +342,7 @@ private fun PetTypeStep(
                     ) {
                         Text(type.emoji, style = MaterialTheme.typography.headlineLarge)
                         Text(
-                            type.label,
+                            com.petcare.companionlite.ui.components.petTypeLabel(type),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                             color = if (isSelected) Sage else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -340,7 +359,7 @@ private fun PetTypeStep(
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Sage)
         ) {
-            Text("Continue", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.ui_2e02623966), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
         }
     }
 }
@@ -367,7 +386,7 @@ private fun NameBreedStep(
         item {
             Spacer(Modifier.height(16.dp))
             Text(
-                "${petType.emoji} What's your ${petType.label.lowercase()}'s name?",
+                stringResource(R.string.ui_3d6d58eab3, petType.emoji, com.petcare.companionlite.ui.components.petTypeLabel(petType)),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -377,8 +396,8 @@ private fun NameBreedStep(
             OutlinedTextField(
                 value = name,
                 onValueChange = onNameChange,
-                label = { Text("Name") },
-                placeholder = { Text("e.g., Shadow, Luna, Mango...") },
+                label = { Text(stringResource(R.string.ui_709a23220f)) },
+                placeholder = { Text(stringResource(R.string.ui_4c0ac94037)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
@@ -388,8 +407,8 @@ private fun NameBreedStep(
             OutlinedTextField(
                 value = breed,
                 onValueChange = onBreedChange,
-                label = { Text("Breed (optional)") },
-                placeholder = { Text("e.g., Persian, Labrador...") },
+                label = { Text(stringResource(R.string.ui_7622f8804d)) },
+                placeholder = { Text(stringResource(R.string.ui_114c8a28d7)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
@@ -400,7 +419,7 @@ private fun NameBreedStep(
                 OutlinedTextField(
                     value = weight,
                     onValueChange = onWeightChange,
-                    label = { Text("Weight (kg)") },
+                    label = { Text(stringResource(if (com.petcare.companionlite.ui.components.LocalWeightUnit.current == "lb") R.string.unit_lb else R.string.unit_kg)) },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     shape = RoundedCornerShape(16.dp),
@@ -408,7 +427,7 @@ private fun NameBreedStep(
                 OutlinedTextField(
                     value = age,
                     onValueChange = onAgeChange,
-                    label = { Text("Age (years)") },
+                    label = { Text(stringResource(R.string.birth_date_optional)) },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
                     shape = RoundedCornerShape(16.dp),
@@ -424,7 +443,7 @@ private fun NameBreedStep(
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Sage)
             ) {
-                Text("Continue", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.ui_2e02623966), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
             }
         }
     }
@@ -447,7 +466,7 @@ private fun PhotoStep(
     ) {
         Spacer(Modifier.height(32.dp))
         Text(
-            "📷 Add a photo of $petName!",
+            stringResource(R.string.ui_ae601382c0, petName),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
@@ -455,7 +474,7 @@ private fun PhotoStep(
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            "This makes everything more personal",
+            stringResource(R.string.ui_f01392ce5d),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             textAlign = TextAlign.Center,
@@ -464,8 +483,8 @@ private fun PhotoStep(
 
         if (photoUri != null) {
             AsyncImage(
-                model = photoUri,
-                contentDescription = "$petName photo",
+                model = androidx.compose.ui.platform.LocalContext.current.petPhotoModel(photoUri),
+                contentDescription = stringResource(R.string.ui_4e1af604ac, petName),
                 modifier = Modifier
                     .size(200.dp)
                     .clip(RoundedCornerShape(28.dp)),
@@ -473,7 +492,7 @@ private fun PhotoStep(
             )
             Spacer(Modifier.height(16.dp))
             TextButton(onClick = onPickPhoto) {
-                Text("Change photo", color = Sage)
+                Text(stringResource(R.string.ui_ed5690c3ae), color = Sage)
             }
         } else {
             Card(
@@ -495,7 +514,7 @@ private fun PhotoStep(
                             tint = Sage,
                         )
                         Spacer(Modifier.height(8.dp))
-                        Text("Tap to add", color = Sage, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.ui_22c76fc2c8), color = Sage, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -509,7 +528,7 @@ private fun PhotoStep(
             colors = ButtonDefaults.buttonColors(containerColor = Sage)
         ) {
             Text(
-                if (photoUri != null) "Continue" else "Continue without photo",
+                if (photoUri != null) stringResource(R.string.ui_2e02623966) else stringResource(R.string.ui_cfecd1316b),
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium,
             )
@@ -534,7 +553,7 @@ private fun ReminderStep(
     ) {
         Spacer(Modifier.height(16.dp))
         Text(
-            "🍖 When should we remind you to feed $petName?",
+            stringResource(R.string.ui_d050b437ca, petName),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
@@ -542,7 +561,7 @@ private fun ReminderStep(
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            "You can add more reminders later",
+            stringResource(R.string.ui_5aa334466c),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             textAlign = TextAlign.Center,
@@ -558,11 +577,11 @@ private fun ReminderStep(
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Sage)
         ) {
-            Text("Set Reminder", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.ui_20fac06f98), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
         }
         Spacer(Modifier.height(8.dp))
         TextButton(onClick = onSkip) {
-            Text("Skip for now", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
+            Text(stringResource(R.string.ui_6fc09607ae), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
         }
     }
 }
@@ -594,7 +613,7 @@ private fun CongratsStep(
         )
         Spacer(Modifier.height(24.dp))
         Text(
-            "You're all set!",
+            stringResource(R.string.ui_058a813016),
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Black,
             color = MaterialTheme.colorScheme.onBackground,
@@ -602,7 +621,7 @@ private fun CongratsStep(
         )
         Spacer(Modifier.height(12.dp))
         Text(
-            "${petType.emoji} $petName is ready for a wonderful day!",
+            stringResource(R.string.ui_5f3f0e5677, petType.emoji, petName),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
             textAlign = TextAlign.Center,
@@ -627,7 +646,7 @@ private fun CongratsStep(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    "Meet $petName ❤️",
+                    stringResource(R.string.ui_1a284c7ba7, petName),
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.titleMedium,
                     color = Color.White,

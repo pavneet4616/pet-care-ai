@@ -2,7 +2,6 @@ package com.petcare.companionlite
 
 import android.app.Application
 import androidx.appcompat.app.AppCompatDelegate
-import com.google.android.gms.ads.MobileAds
 import com.petcare.companionlite.core.AppContainer
 import com.petcare.companionlite.core.AppLocale
 import com.petcare.companionlite.notifications.NotificationChannels
@@ -23,7 +22,6 @@ class PetCareApplication : Application() {
         // Default dark until saved preference loads.
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
         NotificationChannels.create(this)
-        MobileAds.initialize(this)
         container = AppContainer(this)
         RescheduleRemindersWorker.enqueue(this)
         WeeklyReportWorker.enqueue(this)

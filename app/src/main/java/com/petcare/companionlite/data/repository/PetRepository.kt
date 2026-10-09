@@ -1,6 +1,10 @@
 package com.petcare.companionlite.data.repository
 
+import com.petcare.companionlite.R
+
 import com.petcare.companionlite.core.PetStateEngine
+import com.petcare.companionlite.core.inAppLanguage
+import com.petcare.companionlite.core.labelResource
 import com.petcare.companionlite.data.local.ActivityDao
 import com.petcare.companionlite.data.local.ExpenseDao
 import com.petcare.companionlite.data.local.HealthLogDao
@@ -31,11 +35,21 @@ import com.petcare.companionlite.notifications.NotificationScheduler
 import com.petcare.companionlite.data.settings.SettingsStore
 import java.time.ZoneId
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flow
+import java.time.LocalDate
+import com.petcare.companionlite.data.model.countCareStreakFromDays
+import com.petcare.companionlite.core.PetPhotoStore
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class PetRepository(
+    private val context: android.content.Context,
     private val petDao: PetDao,
     private val activityDao: ActivityDao,
     private val reminderDao: ReminderDao,
@@ -45,11 +59,13 @@ class PetRepository(
     private val expenseDao: ExpenseDao,
     private val settingsStore: SettingsStore,
     private val notificationScheduler: NotificationScheduler,
+    private val photoStore: PetPhotoStore,
 ) {
     private val zoneId: ZoneId
         get() = ZoneId.systemDefault()
 
     val settings = settingsStore.settings
+    val hasReminders = reminderDao.observeCount().map { it > 0 }
 
     fun observePets(): Flow<List<PetProfile>> = petDao.observeAll().map { pets -> pets.map { it.toProfile() } }
 
@@ -73,20 +89,25 @@ class PetRepository(
     fun observeExpenses(petId: Long): Flow<List<Expense>> =
         expenseDao.observeForPet(petId).map { items -> items.map { it.toDomain() } }
 
-    fun observeTimeline(petId: Long): Flow<List<TimelineItem>> = combine(
+    fun observeTimeline(petId: Long): Flow<List<TimelineItem>> = dates.flatMapLatest { date -> combine(
         observeReminders(petId),
-        observeActivities(petId),
-    ) { reminders, activities ->
-        computeTimeline(reminders, activities, nowMillis(), zoneId).items
-    }
+        activityDao.observeForPetSince(petId, date.minusDays(2).atStartOfDay(zoneId).toInstant().toEpochMilli()),
+        clock,
+    ) { reminders, activities, now ->
+        computeTimeline(reminders, activities.mapNotNull { it.toDomain() }, now, zoneId).items
+    } }
 
-    fun observeDashboard(): Flow<List<PetDashboardItem>> = combine(
+    private val clock = flow { while (true) { emit(nowMillis()); delay(60_000) } }
+    private val dates = clock.map { java.time.Instant.ofEpochMilli(it).atZone(zoneId).toLocalDate() }.distinctUntilChanged()
+
+    fun observeDashboard(): Flow<List<PetDashboardItem>> = dates.flatMapLatest { date -> combine(
         petDao.observeAll(),
-        activityDao.observeAll(),
+        activityDao.observeSince(date.minusDays(30).atStartOfDay(zoneId).toInstant().toEpochMilli()),
         reminderDao.observeAll(),
-        waterLogDao.observeAll(),
-    ) { pets, activities, reminders, waterLogs ->
-        val now = nowMillis()
+        waterLogDao.observeSince(date.minusDays(30).atStartOfDay(zoneId).toInstant().toEpochMilli()),
+        combine(activityDao.observeCareDays(), clock) { days, now -> days to now },
+    ) { pets, activities, reminders, waterLogs, daysAndNow ->
+        val (days, now) = daysAndNow
         pets.map { pet ->
             val petActivities = activities.filter { it.petId == pet.id }.mapNotNull { it.toDomain() }
             val petReminders  = reminders.filter  { it.petId == pet.id }.mapNotNull { it.toDomain() }
@@ -98,19 +119,28 @@ class PetRepository(
                 waterLogs  = petWaterLogs,
                 nowMillis  = now,
                 zoneId     = zoneId,
+                streakOverride = countCareStreakFromDays(days.filter { it.petId == pet.id }.map { LocalDate.parse(it.day) }.toSet(), java.time.Instant.ofEpochMilli(now).atZone(zoneId).toLocalDate()),
+                context = context,
             )
         }
-    }
+    } }
 
-    suspend fun savePet(profile: PetProfile): PetSaveResult {
-        val entity = profile.toEntity() ?: return PetSaveResult.InvalidInput
+    private val saveMutex = kotlinx.coroutines.sync.Mutex()
+    suspend fun savePet(profile: PetProfile): PetSaveResult = saveMutex.withLock { savePetInternal(profile) }
+
+    private suspend fun savePetInternal(profile: PetProfile): PetSaveResult {
+        var entity = profile.toEntity() ?: return PetSaveResult.InvalidInput
         if (entity.id == 0L) {
             val canAddMore = settings.first().hasFullAccess || petDao.count() < 2
             if (!canAddMore) return PetSaveResult.FreeLimitReached
+            entity = entity.copy(photoUri = try { photoStore.importPhoto(entity.photoUri) } catch (_: Exception) { return PetSaveResult.PhotoError })
             val id = petDao.insert(entity)
             return PetSaveResult.Success(id)
         }
+        val oldPhoto = petDao.getById(entity.id)?.photoUri
+        entity = entity.copy(photoUri = try { photoStore.importPhoto(entity.photoUri) } catch (_: Exception) { return PetSaveResult.PhotoError })
         petDao.update(entity)
+        if (oldPhoto != entity.photoUri) photoStore.delete(oldPhoto)
         return PetSaveResult.Success(entity.id)
     }
 
@@ -118,7 +148,9 @@ class PetRepository(
         // FK cascade will remove activities, reminders, health_logs
         val petReminders = reminderDao.getAll().filter { it.petId == petId }
         petReminders.forEach { notificationScheduler.cancelReminder(it.id) }
+        val photo = petDao.getById(petId)?.photoUri
         petDao.deleteById(petId)
+        photoStore.delete(photo)
     }
 
     suspend fun logActivity(petId: Long, type: TaskType): LogActivityResult {
@@ -127,7 +159,7 @@ class PetRepository(
         if (latest != null && currentTime - latest.timestamp < DUPLICATE_TAP_GUARD_MILLIS) {
             return LogActivityResult(
                 duplicateDetected = true,
-                toastMessage = "Already logged just now. We ignored the duplicate tap.",
+                toastMessage = context.inAppLanguage().getString(R.string.ui_6e37fc3377),
             )
         }
 
@@ -142,7 +174,7 @@ class PetRepository(
 
         return LogActivityResult(
             duplicateDetected = false,
-            toastMessage = type.successMessage,
+            toastMessage = context.inAppLanguage().getString(com.petcare.companionlite.R.string.care_logged, context.inAppLanguage().getString(type.labelResource())),
         )
     }
 
@@ -166,11 +198,14 @@ class PetRepository(
         }
 
         val persisted = if (reminder.id == 0L) {
-            val id = reminderDao.insert(reminder.toEntity())
-            reminder.copy(id = id)
+            val fresh = reminder.copy(createdAt = nowMillis())
+            val id = reminderDao.insert(fresh.toEntity())
+            fresh.copy(id = id)
         } else {
-            reminderDao.update(reminder.toEntity())
-            reminder
+            val existing = reminderDao.getAll().firstOrNull { it.id == reminder.id }
+            val edited = reminder.copy(createdAt = existing?.createdAt ?: reminder.createdAt)
+            reminderDao.update(edited.toEntity())
+            edited
         }
         notificationScheduler.scheduleReminder(persisted, pet.name)
         return ReminderSaveResult.Success
@@ -214,6 +249,27 @@ class PetRepository(
     suspend fun getReminder(reminderId: Long): Reminder? = reminderDao.getById(reminderId)?.toDomain()
 
     suspend fun getPet(petId: Long): PetProfile? = petDao.getById(petId)?.toProfile()
+
+    suspend fun reminderCompleted(reminderId: Long, scheduledAt: Long): Boolean {
+        val reminder = getReminder(reminderId) ?: return true
+        val activities = activityDao.getActivitiesSince(scheduledAt - 90 * 60 * 1000L).mapNotNull { it.toDomain() }
+        val reminders = reminderDao.getAll().mapNotNull { it.toDomain() }
+        return computeTimeline(reminders, activities, nowMillis(), zoneId, java.time.Instant.ofEpochMilli(scheduledAt).atZone(zoneId).toLocalDate()).items
+            .any { it.reminder.id == reminderId && it.scheduledAt == scheduledAt && it.matchedActivity != null }
+    }
+
+    suspend fun completeReminder(reminderId: Long, scheduledAt: Long) {
+        val reminder = getReminder(reminderId) ?: return
+        if (reminderCompleted(reminderId, scheduledAt)) return
+        activityDao.insert(ActivityEntity(petId = reminder.petId, type = reminder.type.name,
+            timestamp = nowMillis(), reminderId = reminderId, scheduledAt = scheduledAt))
+    }
+
+    suspend fun migratePhotos() {
+        petDao.getAll().filter { it.photoUri?.startsWith("content:") == true }.forEach { pet ->
+            runCatching { photoStore.importPhoto(pet.photoUri) }.getOrNull()?.let { petDao.update(pet.copy(photoUri = it)) }
+        }
+    }
 
     suspend fun rescheduleAllReminders() {
         val petsById = petDao.getAll().associateBy { it.id }

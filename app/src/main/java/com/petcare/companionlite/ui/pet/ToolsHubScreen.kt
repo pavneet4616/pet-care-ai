@@ -1,5 +1,9 @@
 package com.petcare.companionlite.ui.pet
 
+import com.petcare.companionlite.R
+
+import androidx.compose.ui.res.stringResource
+
 import android.app.Activity
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
@@ -59,7 +63,6 @@ fun ToolsHubScreen(petId: Long, onBack: () -> Unit, onAskAi: (Long, String) -> U
     val snackbar = remember { SnackbarHostState() }
     val adsManager = app.container.adsManager
 
-    LaunchedEffect(Unit) { adsManager.loadRewarded(context) }
     LaunchedEffect(message) { message?.let { snackbar.showSnackbar(it); vm.clearMessage() } }
 
     var showWater by remember { mutableStateOf(false) }
@@ -68,21 +71,19 @@ fun ToolsHubScreen(petId: Long, onBack: () -> Unit, onAskAi: (Long, String) -> U
     var showNote by remember { mutableStateOf(false) }
     var showExpense by remember { mutableStateOf(false) }
 
-    // Track actions for smart interstitial (never for Pro / ad-free users)
     val activity = context as? Activity
     val appSettings by app.container.repository.settings.collectAsStateWithLifecycle(
         initialValue = com.petcare.companionlite.data.model.SettingsState(),
     )
-    fun onLogged() {
-        if (!appSettings.hasNoAds) {
-            activity?.let { adsManager.trackActionAndMaybeShowInterstitial(it) }
-        }
+    val adsAllowed by adsManager.adsAllowed.collectAsStateWithLifecycle()
+    LaunchedEffect(adsAllowed, appSettings.hasNoAds) {
+        if (adsAllowed && !appSettings.hasNoAds) adsManager.loadRewarded(context)
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Care Tools", fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.ui_01df9def1d), fontWeight = FontWeight.Bold) },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, null) } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
@@ -96,15 +97,15 @@ fun ToolsHubScreen(petId: Long, onBack: () -> Unit, onAskAi: (Long, String) -> U
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // ── TODAY SUMMARY ──
-            item { TodaySummaryCard(state) }
+            item { TodaySummaryCard(state, appSettings.currencyCode) }
 
             // ── WATER SECTION ──
             item {
-                ToolSection("Water Intake", WaterBlue, Icons.Filled.LocalDrink, "💧 ${state.todayWaterTotal}ml today", { showWater = true }) {
+                ToolSection(stringResource(R.string.ui_85042a9e4e), WaterBlue, Icons.Filled.LocalDrink, stringResource(R.string.ui_b1788cfa6e, state.todayWaterTotal), { showWater = true }) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(100, 250, 500).forEach { ml ->
-                            FilledTonalButton(onClick = { vm.logWater(petId, ml); onLogged() }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
-                                Text("${ml}ml", fontSize = 13.sp)
+                            FilledTonalButton(onClick = { vm.logWater(petId, ml) }, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
+                                Text(stringResource(R.string.ui_b34fdeb8c4, ml), fontSize = 13.sp)
                             }
                         }
                     }
@@ -116,10 +117,10 @@ fun ToolsHubScreen(petId: Long, onBack: () -> Unit, onAskAi: (Long, String) -> U
 
             // ── MOOD SECTION ──
             item {
-                ToolSection("Mood Tracker", MoodAmber, Icons.Filled.Mood, "Latest: ${state.latestMood}", { showMood = true }) {
+                ToolSection(stringResource(R.string.ui_2004b16ce5), MoodAmber, Icons.Filled.Mood, stringResource(R.string.ui_27e04ccd43, state.latestMood), { showMood = true }) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf("😊" to "Happy", "😐" to "Neutral", "😢" to "Sad", "😴" to "Tired", "🤒" to "Sick").forEach { (emoji, label) ->
-                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).clickable { vm.logMood(petId, emoji, label); onLogged() }.padding(8.dp)) {
+                        listOf("😊" to stringResource(R.string.ui_be31a86c98), "😐" to stringResource(R.string.ui_4bd2913945), "😢" to stringResource(R.string.ui_8057f8b2a5), "😴" to stringResource(R.string.ui_d73ccd1316), "🤒" to stringResource(R.string.ui_630aa21093)).forEach { (emoji, label) ->
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).clickable { vm.logMood(petId, emoji, label) }.padding(8.dp)) {
                                 Text(emoji, fontSize = 24.sp)
                                 Text(label, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurface.copy(0.7f))
                             }
@@ -136,62 +137,43 @@ fun ToolsHubScreen(petId: Long, onBack: () -> Unit, onAskAi: (Long, String) -> U
 
             // ── VOMIT SECTION ──
             item {
-                ToolSection("Health Incidents", VomitOrange, Icons.Filled.Sick, "${state.vomitCountToday} today", { showVomit = true }) {
+                ToolSection(stringResource(R.string.ui_2b43466a75), VomitOrange, Icons.Filled.Sick, stringResource(R.string.ui_4398d86c0f, state.vomitCountToday), { showVomit = true }) {
                     state.vomitLogs.take(3).forEach { log ->
-                        LogEntry(log.note.ifBlank { "Incident recorded" }, ToolsHubViewModel.formatTimestamp(log.timestamp), VomitOrange)
+                        LogEntry(log.note.ifBlank { stringResource(R.string.ui_feb141d571) }, ToolsHubViewModel.formatTimestamp(log.timestamp), VomitOrange)
                     }
-                    if (state.vomitLogs.isEmpty()) EmptyHint("No incidents logged yet")
+                    if (state.vomitLogs.isEmpty()) EmptyHint(stringResource(R.string.ui_d62455077a))
                     OutlinedButton(
                         onClick = {
                             val latest = state.vomitLogs.firstOrNull()?.note?.take(80).orEmpty()
-                            val q = if (latest.isNotBlank()) "My pet had a health incident: $latest. What should I do?"
-                            else "My pet had a health incident. What should I watch for?"
+                            val q = if (latest.isNotBlank()) context.getString(R.string.health_incident_prompt, latest)
+                            else context.getString(R.string.ui_4cd769c70c)
                             onAskAi(petId, q)
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                     ) {
-                        Text("Ask AI what to do next", fontSize = 13.sp)
+                        Text(stringResource(R.string.ui_9b2f07654e), fontSize = 13.sp)
                     }
                 }
             }
 
             // ── NOTES SECTION ──
             item {
-                ToolSection("Notes & To-Dos", NotesTeal, Icons.AutoMirrored.Filled.Notes, "${state.notes.size} notes", { showNote = true }) {
+                ToolSection(stringResource(R.string.ui_f401f582e6), NotesTeal, Icons.AutoMirrored.Filled.Notes, stringResource(R.string.ui_e21aba7108, state.notes.size), { showNote = true }) {
                     state.notes.take(5).forEach { note ->
                         NoteEntry(note, onToggle = { vm.toggleNoteCompleted(note) }, onDelete = { vm.deleteNote(note.id) })
                     }
-                    if (state.notes.isEmpty()) EmptyHint("Add notes about your pet")
+                    if (state.notes.isEmpty()) EmptyHint(stringResource(R.string.ui_25345bddcb))
                 }
             }
 
             // ── EXPENSES SECTION ──
             item {
-                ToolSection("Expenses", ExpensePurple, Icons.Filled.AttachMoney, "Total: ${"$"}${"%.2f".format(state.totalExpenses)}", { showExpense = true }) {
+                ToolSection(stringResource(R.string.ui_8d437dbf95), ExpensePurple, Icons.Filled.AttachMoney, com.petcare.companionlite.core.CareFormats.currency(state.totalExpenses, appSettings.currencyCode), { showExpense = true }) {
                     state.expenses.take(4).forEach { exp ->
-                        LogEntry("${exp.category}: ${"$"}${"%.2f".format(exp.amount)}", ToolsHubViewModel.formatTimestamp(exp.timestamp), ExpensePurple) { vm.deleteExpense(exp.id) }
+                        LogEntry(com.petcare.companionlite.ui.components.expenseLabel(exp.category) + ": " + com.petcare.companionlite.core.CareFormats.currency(exp.amount, appSettings.currencyCode), ToolsHubViewModel.formatTimestamp(exp.timestamp), ExpensePurple) { vm.deleteExpense(exp.id) }
                     }
-                    if (state.expenses.isEmpty()) EmptyHint("Track vet visits, food costs, etc.")
-                }
-            }
-
-            // ── REWARDED AD CTA ──
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1F3D))
-                ) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("📊 Unlock Weekly Insights", fontWeight = FontWeight.Bold, color = Color.White)
-                            Text("Watch a short video to see trends", fontSize = 13.sp, color = Color.White.copy(0.7f))
-                        }
-                        FilledTonalButton(onClick = {
-                            activity?.let { act -> adsManager.showRewarded(act) { vm.clearMessage() } }
-                        }, shape = RoundedCornerShape(12.dp)) { Text("Watch") }
-                    }
+                    if (state.expenses.isEmpty()) EmptyHint(stringResource(R.string.ui_8792e123b4))
                 }
             }
 
@@ -202,17 +184,17 @@ fun ToolsHubScreen(petId: Long, onBack: () -> Unit, onAskAi: (Long, String) -> U
     }
 
     // ── DIALOGS ──
-    if (showWater) WaterDialog({ showWater = false }) { ml -> vm.logWater(petId, ml); onLogged() }
-    if (showMood) MoodDialog({ showMood = false }) { emoji, note -> vm.logMood(petId, emoji, note); onLogged() }
-    if (showVomit) InputDialog("Log Health Incident", "Details (color, contents, time)", { showVomit = false }) { vm.logVomit(petId, it); onLogged() }
-    if (showNote) NoteDialog({ showNote = false }) { content, isTodo -> vm.saveNote(petId, content, isTodo); onLogged() }
-    if (showExpense) ExpenseDialog({ showExpense = false }) { amt, cat, note -> vm.saveExpense(petId, amt, cat, note); onLogged() }
+    if (showWater) WaterDialog({ showWater = false }) { ml -> vm.logWater(petId, ml) }
+    if (showMood) MoodDialog({ showMood = false }) { emoji, note -> vm.logMood(petId, emoji, note) }
+    if (showVomit) InputDialog(stringResource(R.string.ui_2bf1654bd5), stringResource(R.string.health_incident_details), { showVomit = false }) { vm.logVomit(petId, it) }
+    if (showNote) NoteDialog({ showNote = false }) { content, isTodo -> vm.saveNote(petId, content, isTodo) }
+    if (showExpense) ExpenseDialog({ showExpense = false }) { amt, cat, note -> vm.saveExpense(petId, amt, cat, note) }
 }
 
 // ── COMPOSABLES ──────────────────────────────────────────
 
 @Composable
-private fun TodaySummaryCard(state: ToolsHubUiState) {
+private fun TodaySummaryCard(state: ToolsHubUiState, currencyCode: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -220,12 +202,12 @@ private fun TodaySummaryCard(state: ToolsHubUiState) {
     ) {
         Box(modifier = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(DeepSage, Color(0xFF2E5A47)))).padding(20.dp)) {
             Column {
-                Text("Today's Overview", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 18.sp)
+                Text(stringResource(R.string.ui_8f6d5be5c7), fontWeight = FontWeight.Bold, color = Color.White, fontSize = 18.sp)
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     SummaryChip("💧", "${state.todayWaterTotal}ml", Modifier.weight(1f))
                     SummaryChip("😊", state.latestMood.take(10), Modifier.weight(1f))
-                    SummaryChip("💰", "${"$"}${"%.0f".format(state.todayExpenseTotal)}", Modifier.weight(1f))
+                    SummaryChip("💰", com.petcare.companionlite.core.CareFormats.currency(state.todayExpenseTotal, currencyCode), Modifier.weight(1f))
                 }
             }
         }
@@ -309,18 +291,18 @@ private fun EmptyHint(text: String) {
 @Composable
 private fun WaterDialog(onDismiss: () -> Unit, onConfirm: (Int) -> Unit) {
     var input by remember { mutableStateOf("") }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text("💧 Log Water Intake") },
-        text = { OutlinedTextField(value = input, onValueChange = { input = it }, label = { Text("Amount (ml)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true) },
-        confirmButton = { TextButton(onClick = { input.toIntOrNull()?.let { if (it > 0) { onConfirm(it); onDismiss() } } }) { Text("Log") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.ui_f8d55b24fa)) },
+        text = { OutlinedTextField(value = input, onValueChange = { input = it }, label = { Text(stringResource(R.string.ui_c068fc8e89)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true) },
+        confirmButton = { TextButton(onClick = { input.toIntOrNull()?.let { if (it > 0) { onConfirm(it); onDismiss() } } }) { Text(stringResource(R.string.ui_8bf95ea372)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.ui_77dfd2135f)) } })
 }
 
 @Composable
 private fun MoodDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) {
     var selected by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
-    val moods = listOf("😊" to "Happy", "😐" to "Neutral", "😢" to "Sad", "😴" to "Tired", "🤒" to "Sick", "😡" to "Angry", "🥰" to "Loved", "😰" to "Anxious")
-    AlertDialog(onDismissRequest = onDismiss, title = { Text("How is your pet feeling?") },
+    val moods = listOf("😊" to stringResource(R.string.ui_be31a86c98), "😐" to stringResource(R.string.ui_4bd2913945), "😢" to stringResource(R.string.ui_8057f8b2a5), "😴" to stringResource(R.string.ui_d73ccd1316), "🤒" to stringResource(R.string.ui_630aa21093), "😡" to stringResource(R.string.ui_b674094954), "🥰" to stringResource(R.string.ui_6f345fa2ac), "😰" to stringResource(R.string.ui_1f15785ad4))
+    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.ui_6818bebd34)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
@@ -332,30 +314,30 @@ private fun MoodDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Uni
                         }
                     }
                 }
-                OutlinedTextField(value = note, onValueChange = { note = it }, label = { Text("Add a note (optional)") }, singleLine = true)
+                OutlinedTextField(value = note, onValueChange = { note = it }, label = { Text(stringResource(R.string.ui_c9414f7e6b)) }, singleLine = true)
             }
         },
-        confirmButton = { TextButton(onClick = { if (selected.isNotEmpty()) { onConfirm(selected, note); onDismiss() } }) { Text("Log") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+        confirmButton = { TextButton(onClick = { if (selected.isNotEmpty()) { onConfirm(selected, note); onDismiss() } }) { Text(stringResource(R.string.ui_8bf95ea372)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.ui_77dfd2135f)) } })
 }
 
 @Composable
 private fun NoteDialog(onDismiss: () -> Unit, onConfirm: (String, Boolean) -> Unit) {
     var content by remember { mutableStateOf("") }
     var isTodo by remember { mutableStateOf(false) }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text("📝 Add Note") },
+    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.ui_dce84e3dee)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = content, onValueChange = { content = it }, label = { Text("Note content") }, minLines = 2, maxLines = 4)
+                OutlinedTextField(value = content, onValueChange = { content = it }, label = { Text(stringResource(R.string.ui_319782c1ba)) }, minLines = 2, maxLines = 4)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = isTodo, onCheckedChange = { isTodo = it })
                     Spacer(Modifier.width(4.dp))
-                    Text("Mark as to-do", fontSize = 14.sp)
+                    Text(stringResource(R.string.ui_477b3a53c6), fontSize = 14.sp)
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { if (content.isNotBlank()) { onConfirm(content, isTodo); onDismiss() } }) { Text("Save") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+        confirmButton = { TextButton(onClick = { if (content.isNotBlank()) { onConfirm(content, isTodo); onDismiss() } }) { Text(stringResource(R.string.ui_efc007a393)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.ui_77dfd2135f)) } })
 }
 
 @Composable
@@ -363,23 +345,23 @@ private fun ExpenseDialog(onDismiss: () -> Unit, onConfirm: (Double, String, Str
     var amount by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
-    val cats = listOf("🏥 Vet", "🍖 Food", "🧴 Grooming", "💊 Medicine", "🎾 Toys", "📦 Other")
-    AlertDialog(onDismissRequest = onDismiss, title = { Text("💰 Log Expense") },
+    val cats = listOf("vet" to stringResource(R.string.expense_vet), "food" to stringResource(R.string.expense_food), "grooming" to stringResource(R.string.expense_grooming), "medicine" to stringResource(R.string.expense_medicine), "toys" to stringResource(R.string.expense_toys), "other" to stringResource(R.string.expense_other))
+    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.ui_b6665200cd)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = amount, onValueChange = { amount = it }, label = { Text("Amount ($)") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
-                Text("Category", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                OutlinedTextField(value = amount, onValueChange = { amount = it }, label = { Text(stringResource(R.string.ui_0dde6c5905)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
+                Text(stringResource(R.string.ui_a3c686e711), fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                    cats.forEach { cat ->
+                    cats.forEach { (cat, label) ->
                         val isSel = category == cat
-                        FilterChip(selected = isSel, onClick = { category = cat }, label = { Text(cat, fontSize = 12.sp) })
+                        FilterChip(selected = isSel, onClick = { category = cat }, label = { Text(label, fontSize = 12.sp) })
                     }
                 }
-                OutlinedTextField(value = note, onValueChange = { note = it }, label = { Text("Note (optional)") }, singleLine = true)
+                OutlinedTextField(value = note, onValueChange = { note = it }, label = { Text(stringResource(R.string.ui_4e39567064)) }, singleLine = true)
             }
         },
-        confirmButton = { TextButton(onClick = { val a = amount.toDoubleOrNull(); if (a != null && a > 0 && category.isNotBlank()) { onConfirm(a, category, note); onDismiss() } }) { Text("Save") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+        confirmButton = { TextButton(onClick = { val a = com.petcare.companionlite.core.CareFormats.parseNumber(amount); if (a != null && a > 0 && category.isNotBlank()) { onConfirm(a, category, note); onDismiss() } }) { Text(stringResource(R.string.ui_efc007a393)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.ui_77dfd2135f)) } })
 }
 
 @Composable
@@ -387,6 +369,6 @@ private fun InputDialog(title: String, label: String, onDismiss: () -> Unit, onC
     var input by remember { mutableStateOf("") }
     AlertDialog(onDismissRequest = onDismiss, title = { Text(title) },
         text = { OutlinedTextField(value = input, onValueChange = { input = it }, label = { Text(label) }, minLines = 2) },
-        confirmButton = { TextButton(onClick = { if (input.isNotBlank()) { onConfirm(input); onDismiss() } }) { Text("Save") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+        confirmButton = { TextButton(onClick = { if (input.isNotBlank()) { onConfirm(input); onDismiss() } }) { Text(stringResource(R.string.ui_efc007a393)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.ui_77dfd2135f)) } })
 }

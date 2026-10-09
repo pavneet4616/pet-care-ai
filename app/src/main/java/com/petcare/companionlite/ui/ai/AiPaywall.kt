@@ -2,6 +2,8 @@ package com.petcare.companionlite.ui.ai
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -34,6 +36,9 @@ import androidx.compose.ui.unit.sp
 import com.petcare.companionlite.R
 import com.petcare.companionlite.data.ai.AiQuota
 import com.petcare.companionlite.ui.theme.PremiumGold
+import androidx.compose.ui.platform.LocalContext
+import android.content.Intent
+import android.net.Uri
 
 enum class AiPlan { WEEKLY, MONTHLY }
 
@@ -54,11 +59,15 @@ fun AiPaywallSheet(
     billingLoading: Boolean = false,
     billingMessage: String? = null,
 ) {
+    val context = LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        (context.applicationContext as com.petcare.companionlite.PetCareApplication).container.diagnostics.event("paywall_view")
+    }
     var plan by remember { mutableStateOf(AiPlan.MONTHLY) }
     val selectedReady = if (plan == AiPlan.MONTHLY) monthlyReady else weeklyReady
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(20.dp),
+            modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(stringResource(R.string.paywall_headline, petName), fontWeight = FontWeight.Bold, fontSize = 19.sp)
@@ -73,12 +82,12 @@ fun AiPaywallSheet(
                 stringResource(R.string.benefit_insights),
                 stringResource(R.string.benefit_no_ads),
             ).forEach { line ->
-                Text("✓ $line", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                Text(stringResource(R.string.ui_98d3f752d4, line), fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
             }
             PaywallPlanCard(
                 selected = plan == AiPlan.MONTHLY,
                 title = stringResource(R.string.monthly_pro),
-                badge = stringResource(R.string.best_value),
+                badge = null,
                 price = if (monthlyReady) monthlyPriceText else stringResource(R.string.paywall_price_loading),
                 subtitle = stringResource(R.string.monthly_subtitle),
                 onSelect = { plan = AiPlan.MONTHLY },
@@ -135,6 +144,15 @@ fun AiPaywallSheet(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                 TextButton(onClick = onRestore) { Text(stringResource(R.string.restore_purchases), fontSize = 13.sp) }
                 TextButton(onClick = onDismiss) { Text(stringResource(R.string.maybe_later), fontSize = 13.sp) }
+            }
+            Text(stringResource(R.string.cancel_in_play), fontSize = 12.sp)
+            Row {
+                TextButton(onClick = {
+                    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(context.getString(R.string.privacy_policy_url)))) }
+                }) { Text(stringResource(R.string.privacy_policy), fontSize = 12.sp) }
+                TextButton(onClick = {
+                    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(context.getString(R.string.terms_of_service_url)))) }
+                }) { Text(stringResource(R.string.terms_of_service), fontSize = 12.sp) }
             }
             Text(
                 stringResource(R.string.paywall_legal),

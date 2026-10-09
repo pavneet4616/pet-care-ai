@@ -11,6 +11,7 @@ data class AiPetContext(
     val species: String? = null,
     val breed: String? = null,
     val ageYears: String? = null,
+    val ageMonths: Long? = null,
     val weightKg: String? = null,
     val summary7d: String? = null,
     val overdue: List<String> = emptyList(),
@@ -28,6 +29,7 @@ data class AiQuota(
     val used: Int = 0,
     val remaining: Int = 5,
     val bonusRemaining: Int = 1,
+    val bonusReady: Boolean = false,
     val resetAt: String? = null,
 )
 

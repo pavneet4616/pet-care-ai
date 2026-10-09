@@ -39,6 +39,7 @@ data class AiChatUiState(
 class AiChatViewModel(
     private val petId: Long,
     private val repository: AiRepository,
+    private val app: com.petcare.companionlite.PetCareApplication,
 ) : ViewModel() {
 
     private val _ui = MutableStateFlow(AiChatUiState())
@@ -123,6 +124,7 @@ class AiChatViewModel(
                 )
             ) {
                 is AiSendResult.Sent -> {
+                    app.container.diagnostics.event("ai_message_sent")
                     _ui.value = _ui.value.copy(
                         input = "", sending = false,
                         quota = result.quota ?: _ui.value.quota,
@@ -173,9 +175,14 @@ class AiChatViewModel(
     }
 
     fun retryWithBonus() {
-        pendingUseBonus = true
-        _ui.value = _ui.value.copy(showPaywall = false)
-        send(useBonus = true)
+        if (_ui.value.sending) return
+        _ui.value = _ui.value.copy(showPaywall = false,sending=true)
+        viewModelScope.launch {
+            val verified=repository.awaitVerifiedReward()
+            _ui.value = _ui.value.copy(sending=false)
+            if (verified) send(useBonus=true)
+            else _ui.value = _ui.value.copy(error=app.getString(com.petcare.companionlite.R.string.reward_verification_pending))
+        }
     }
 
     fun dismissPaywall() {
@@ -191,7 +198,14 @@ class AiChatViewModel(
     }
 
     fun markFeedback(message: ChatMessage, helpful: Boolean) {
-        viewModelScope.launch { repository.markFeedback(message.id, helpful) }
+        viewModelScope.launch {
+            repository.markFeedback(message.id, helpful)
+            if (helpful) {
+                val container=app.container
+                container.diagnostics.event("ai_helpful")
+                container.reviewPrompter.positiveMoment()
+            }
+        }
     }
 
     fun openReport(message: ChatMessage) {
@@ -232,6 +246,7 @@ class AiChatViewModel(
         }
         sessionIdFlow.value = sessionId
         viewModelScope.launch {
+            repository.recoverInterruptedMessages(sessionId)
             val draft = repository.getDraft(sessionId).orEmpty()
             _ui.value = _ui.value.copy(sessionId = sessionId, input = draft, showHistory = false)
         }

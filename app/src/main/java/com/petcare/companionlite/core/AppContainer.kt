@@ -21,8 +21,12 @@ class AppContainer(context: Context) {
     private val database = PetCareDatabase.getDatabase(appContext)
 
     val settingsStore = SettingsStore(appContext)
+    val diagnostics = Diagnostics(appContext,settingsStore)
+    val reviewPrompter = ReviewPrompter(settingsStore)
     val notificationScheduler = NotificationScheduler(appContext)
+    val photoStore = PetPhotoStore(appContext)
     val repository = PetRepository(
+        context = appContext,
         petDao = database.petDao(),
         activityDao = database.activityDao(),
         reminderDao = database.reminderDao(),
@@ -32,15 +36,17 @@ class AppContainer(context: Context) {
         expenseDao = database.expenseDao(),
         settingsStore = settingsStore,
         notificationScheduler = notificationScheduler,
+        photoStore = photoStore,
     )
     val billingManager = BillingManager(appContext, settingsStore)
-    val adsManager = AdsManager()
+    val adsManager = AdsManager(appContext)
     val pdfExportManager = PdfExportManager(appContext)
 
     // AI Pet Companion stack (Worker-backed, local-first history).
-    val aiApi = AiApi()
+    val aiApi = AiApi(context = appContext, integrity = com.petcare.companionlite.data.ai.IntegrityClient(appContext, settingsStore))
     val aiContextBuilder = AiContextBuilder(repository, settingsStore)
     val aiRepository = AiRepository(
+        context = appContext,
         api = aiApi,
         sessions = database.chatSessionDao(),
         messages = database.chatMessageDao(),
@@ -50,6 +56,12 @@ class AppContainer(context: Context) {
     )
 
     init {
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch { repository.migratePhotos() }
+        billingManager.onOwnedPurchasesReady = {
+            CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+                if (settingsStore.getAiPurchaseToken() == null) aiRepository.syncStoredPurchase()
+            }
+        }
         // Server-side Play verification for AI Pro subscriptions (weekly + monthly).
         billingManager.onAiWeeklyPurchased = { purchaseToken, subscriptionId ->
             CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
@@ -59,6 +71,17 @@ class AppContainer(context: Context) {
     }
 
     suspend fun clearAllLocalData() {
-        database.clearAllTables()
+        aiRepository.invalidatePendingResults()
+        kotlinx.coroutines.withContext(Dispatchers.IO) {
+            val installation=settingsStore.getOrCreateInstallationId()
+            repository.getAllReminders().forEach { notificationScheduler.cancelReminder(it.id) }
+            androidx.work.WorkManager.getInstance(appContext).cancelAllWork().result.get()
+            androidx.core.app.NotificationManagerCompat.from(appContext).cancelAll()
+            database.clearAllTables()
+            photoStore.clear()
+            appContext.cacheDir.listFiles()?.forEach { it.deleteRecursively() }
+            settingsStore.clearPersonalData()
+            com.petcare.companionlite.notifications.DataDeletionWorker.enqueue(appContext,installation)
+        }
     }
 }
