@@ -129,7 +129,7 @@ After reliability/security rollout and device checks: vet-ready new reports, hea
 
 ## Staged Worker rollout
 
-Updated: 2026-10-09. Production still runs the pre-hardening Worker. Nothing in this section has been deployed.
+Updated: 2026-10-09. Phase 1 is deployed: Worker version `9509619c-6f6f-4bc6-9736-cf81bc789254` runs with `INTEGRITY_MODE=legacy_allowed`. The previous (pre-hardening) version `a35a83ee-6cc9-4358-b029-a3f6cee6a047` is the rollback target (`wrangler rollback a35a83ee-6cc9-4358-b029-a3f6cee6a047`). Production smoke tests: status 200; tokenless legacy chat answered; tokenless request claiming versionCode 11 and tokenless purchase verify both 401. A sideloaded (upload-key) release build got 403 from verify, which shows Google decodes the Integrity token for this service account (503 would mean the API or permission is missing).
 
 Config lives in `worker/wrangler.jsonc` vars. Change a value there and deploy.
 - `INTEGRITY_MODE`: `enforce` by default. Any value other than `legacy_allowed` also enforces. Enforce rejects every request without a valid Play Integrity token and installation secret.
