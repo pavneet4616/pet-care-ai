@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ai_welcome_title">Was möchten Sie über %1$s wissen?</string>
+    <string name="ai_chips_heading">Häufige Fragen</string>
+    <string name="ai_example_dog">Fragen Sie zum Beispiel: „Mein Hund hat heute erbrochen. Muss ich mir Sorgen machen?“</string>
+    <string name="ai_example_cat">Fragen Sie zum Beispiel: „Meine Katze hat heute erbrochen. Muss ich mir Sorgen machen?“</string>
+    <string name="ai_example_bird">Fragen Sie zum Beispiel: „Mein Vogel hat heute nicht gefressen. Muss ich mir Sorgen machen?“</string>
+    <string name="ai_example_other">Fragen Sie zum Beispiel: „Mein Tier hat heute nicht gefressen. Muss ich mir Sorgen machen?“</string>
+    <string name="ai_input_counter">%1$d / %2$d</string>
+    <string name="ai_share_chooser_title">KI-Antwort teilen</string>
+    <string name="ai_disclaimer_default">Nur KI-Orientierung. Ein Tierarzt sollte medizinische Probleme diagnostizieren.</string>
+    <string name="ai_urgent_banner">Das könnte dringend sein. Kontaktieren Sie jetzt einen Tierarzt.</string>
+    <string name="ai_price_per_month">%1$s / Monat</string>
+    <string name="ai_price_per_week">%1$s / Woche</string>
+    <string name="ai_best_value">Bestes Angebot</string>
+    <string name="ai_best_value_save">Bestes Angebot · %1$d%% sparen</string>
+</resources>

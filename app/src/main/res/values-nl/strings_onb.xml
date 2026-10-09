@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onb_birth_date_hint">Tik om een datum te kiezen</string>
+    <string name="onb_birth_date_not_sure">Weet ik niet</string>
+    <string name="onb_photo_looks_good">Ziet er goed uit! 📸</string>
+    <string name="onb_step_progress">Stap %1$d van %2$d</string>
+    <string name="onb_pet_type_hint">Kies wat het beste past 🐾</string>
+    <string name="onb_edit_title">%1$s bewerken</string>
+</resources>

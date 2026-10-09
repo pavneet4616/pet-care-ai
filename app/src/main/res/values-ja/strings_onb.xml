@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onb_birth_date_hint">タップして日付を選択</string>
+    <string name="onb_birth_date_not_sure">わからない</string>
+    <string name="onb_photo_looks_good">いい感じ！📸</string>
+    <string name="onb_step_progress">ステップ %1$d / %2$d</string>
+    <string name="onb_pet_type_hint">いちばん近いものを選んでね 🐾</string>
+    <string name="onb_edit_title">%1$s を編集</string>
+</resources>

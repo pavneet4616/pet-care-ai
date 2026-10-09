@@ -2,6 +2,7 @@ package com.petcare.companionlite.ui.ai
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.petcare.companionlite.data.ai.AI_MAX_INPUT_CHARS
 import com.petcare.companionlite.data.ai.AiQuota
 import com.petcare.companionlite.data.ai.AiRepository
 import com.petcare.companionlite.data.ai.AiSendResult
@@ -10,6 +11,7 @@ import com.petcare.companionlite.data.ai.isAssistant
 import com.petcare.companionlite.data.ai.parseAiAnswer
 import com.petcare.companionlite.data.model.ChatMessage
 import com.petcare.companionlite.data.model.ChatSession
+import com.petcare.companionlite.data.model.PetType
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -52,6 +55,12 @@ class AiChatViewModel(
     val sessions: StateFlow<List<ChatSession>> =
         repository.observeSessions(petId)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Species of the pet for the species-aware welcome copy. Null until the pet has loaded. */
+    val petType: StateFlow<PetType?> =
+        app.container.repository.observePet(petId)
+            .map { it?.petType }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val items: StateFlow<List<UiChatItem>> =
@@ -96,8 +105,14 @@ class AiChatViewModel(
     }
 
     fun onInputChange(value: String) {
-        _ui.value = _ui.value.copy(input = value, error = null)
-        persistDraftDebounced(value)
+        val capped = value.take(AI_MAX_INPUT_CHARS)
+        _ui.value = _ui.value.copy(input = capped, error = null)
+        persistDraftDebounced(capped)
+    }
+
+    /** Opens the upgrade sheet, e.g. from the quota pill. */
+    fun openPaywall() {
+        _ui.value = _ui.value.copy(showPaywall = true, paywallReason = "manual")
     }
 
     private fun persistDraftDebounced(value: String) {

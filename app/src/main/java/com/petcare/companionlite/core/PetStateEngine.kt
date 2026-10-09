@@ -4,9 +4,8 @@ import android.content.Context
 import com.petcare.companionlite.R
 import com.petcare.companionlite.data.model.*
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
 
 /** Displays facts from care records. Logging cannot establish a pet's health or feelings. */
 object PetStateEngine {
@@ -24,11 +23,23 @@ object PetStateEngine {
         val today = Instant.ofEpochMilli(nowMillis).atZone(zoneId).toLocalDate()
         val timeline = computeTimeline(reminders, activities, nowMillis, zoneId)
         val streak = streakOverride ?: countDailyCareStreak(activities, zoneId, today)
-        val recommended = timeline.items.firstOrNull { it.status == TimelineStatus.OVERDUE }
+        // The most urgent open task: overdue first, then upcoming, then missed.
+        val focus = timeline.items.firstOrNull { it.status == TimelineStatus.OVERDUE }
             ?: timeline.items.firstOrNull { it.status == TimelineStatus.PENDING }
-        val progress = strings.getString(R.string.care_progress, pet.name, timeline.completedCount, timeline.items.size)
+            ?: timeline.items.firstOrNull { it.status == TimelineStatus.MISSED }
+        val allDone = timeline.items.isNotEmpty() && timeline.completedCount == timeline.items.size
+        val prompt = when {
+            reminders.isEmpty() -> strings.getString(R.string.dash_hero_no_routine, pet.name)
+            timeline.items.isEmpty() -> strings.getString(R.string.dash_hero_free_day, pet.name)
+            allDone -> strings.getString(R.string.dash_hero_done, pet.name)
+            focus != null -> strings.getString(
+                R.string.care_task_prompt,
+                pet.name,
+                strings.getString(focus.reminder.type.actionLabelResource()),
+            )
+            else -> strings.getString(R.string.dash_hero_free_day, pet.name)
+        }
         val next = reminders.mapNotNull { reminder -> nextTriggerAt(reminder, nowMillis, zoneId)?.let { it to reminder } }.minByOrNull { it.first }
-        val locale = strings.resources.configuration.locales[0]
         val hour = Instant.ofEpochMilli(nowMillis).atZone(zoneId).hour
         val greeting = when (hour) {
             in 5..11 -> R.string.greeting_morning
@@ -43,24 +54,47 @@ object PetStateEngine {
                 timeline.items.isNotEmpty() && timeline.completedCount == timeline.items.size -> MoodState.HAPPY
                 else -> MoodState.NEUTRAL
             },
-            dailyMessage = progress,
+            dailyMessage = prompt,
             summaryMessage = strings.getString(R.string.care_streak, streak),
             streakDays = streak,
             completedCount = timeline.completedCount,
             pendingCount = timeline.pendingCount,
             overdueCount = timeline.overdueCount,
-            nextReminderText = next?.let {
-                strings.getString(R.string.care_next, strings.getString(it.second.type.labelResource()),
-                    Instant.ofEpochMilli(it.first).atZone(zoneId).format(DateTimeFormatter.ofPattern("EEE HH:mm", locale)))
+            nextReminderText = next?.let { (triggerAt, reminder) ->
+                strings.getString(
+                    R.string.dash_next_format,
+                    strings.getString(reminder.type.actionLabelResource()),
+                    whenLabel(strings, triggerAt, nowMillis, zoneId),
+                )
             }.orEmpty(),
             timeline = timeline.items,
             streakAtRisk = streak > 0 && timeline.pendingCount + timeline.overdueCount > 0,
             personalityMessage = strings.getString(R.string.care_record_message, pet.name),
-            recommendedTaskLabel = recommended?.let { strings.getString(R.string.care_recommended, strings.getString(it.reminder.type.labelResource())) }.orEmpty(),
+            recommendedTaskLabel = focus?.let {
+                strings.getString(R.string.care_recommended, strings.getString(it.reminder.type.actionLabelResource()))
+            }.orEmpty(),
             greetingLine = strings.getString(greeting),
-            emotionalTaskPrompt = recommended?.let { strings.getString(R.string.care_task_prompt, pet.name, strings.getString(it.reminder.type.labelResource())) } ?: progress,
+            emotionalTaskPrompt = prompt,
             hasWaterToday = waterLogs.any { it.timestamp in today.atStartOfDay(zoneId).toInstant().toEpochMilli()..nowMillis },
+            reminderCount = reminders.size,
         )
+    }
+
+    /** "Today 8:00 AM", "Tomorrow 8:00 AM" or "Sat 8:00 AM", with the clock time from the device settings. */
+    private fun whenLabel(context: Context, triggerAt: Long, nowMillis: Long, zoneId: ZoneId): String {
+        val locale = context.resources.configuration.locales[0]
+        val today = Instant.ofEpochMilli(nowMillis).atZone(zoneId).toLocalDate()
+        val day = Instant.ofEpochMilli(triggerAt).atZone(zoneId).toLocalDate()
+        val time = CareFormats.clockText(context, triggerAt, zoneId)
+        return when (day) {
+            today -> context.getString(R.string.dash_when_today, time)
+            today.plusDays(1) -> context.getString(R.string.dash_when_tomorrow, time)
+            else -> context.getString(
+                R.string.dash_when_weekday,
+                day.dayOfWeek.getDisplayName(TextStyle.SHORT, locale),
+                time,
+            )
+        }
     }
 
     fun generateWeeklyReport(
@@ -88,8 +122,8 @@ object PetStateEngine {
         var best = 0
         val dots = (0..6).joinToString(" ") { offset ->
             if (start.plusDays(offset.toLong()) in active) {
-                run++; best = maxOf(best, run); "\u25cf"
-            } else { run = 0; "\u25cb" }
+                run++; best = maxOf(best, run); "●"
+            } else { run = 0; "○" }
         }
         return WeeklyReport(
             petName = pet.name, petEmoji = pet.petType.emoji,
@@ -107,11 +141,20 @@ object PetStateEngine {
     }
 }
 
+/** Sentence fragment for running text only (e.g. "feeding"). Use [actionLabelResource] for labels. */
 fun TaskType.labelResource(): Int = when (this) {
     TaskType.FEED -> R.string.care_feed
     TaskType.WALK -> R.string.care_walk
     TaskType.MEDICINE -> R.string.care_medicine
     TaskType.GROOMING -> R.string.care_grooming
+}
+
+/** Short, capitalized action label for buttons, chips and titles (e.g. "Feed", "Medicine"). */
+fun TaskType.actionLabelResource(): Int = when (this) {
+    TaskType.FEED -> R.string.dash_action_feed
+    TaskType.WALK -> R.string.dash_action_walk
+    TaskType.MEDICINE -> R.string.dash_action_medicine
+    TaskType.GROOMING -> R.string.dash_action_grooming
 }
 
 fun com.petcare.companionlite.data.model.HealthCategory.labelResource(): Int = when (this) {

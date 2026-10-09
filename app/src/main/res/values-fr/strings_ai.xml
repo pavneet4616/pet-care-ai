@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ai_welcome_title">Que voulez-vous savoir sur %1$s ?</string>
+    <string name="ai_chips_heading">Questions fréquentes</string>
+    <string name="ai_example_dog">Essayez : « Mon chien a vomi aujourd’hui. Dois-je m’inquiéter ? »</string>
+    <string name="ai_example_cat">Essayez : « Mon chat a vomi aujourd’hui. Dois-je m’inquiéter ? »</string>
+    <string name="ai_example_bird">Essayez : « Mon oiseau n’a pas mangé aujourd’hui. Dois-je m’inquiéter ? »</string>
+    <string name="ai_example_other">Essayez : « Mon animal n’a pas mangé aujourd’hui. Dois-je m’inquiéter ? »</string>
+    <string name="ai_input_counter">%1$d / %2$d</string>
+    <string name="ai_share_chooser_title">Partager la réponse de l’IA</string>
+    <string name="ai_disclaimer_default">Conseils de l’IA uniquement. Un vétérinaire doit établir tout diagnostic médical.</string>
+    <string name="ai_urgent_banner">Cela peut être urgent. Contactez un vétérinaire maintenant.</string>
+    <string name="ai_price_per_month">%1$s / mois</string>
+    <string name="ai_price_per_week">%1$s / semaine</string>
+    <string name="ai_best_value">Meilleure offre</string>
+    <string name="ai_best_value_save">Meilleure offre · économisez %1$d%%</string>
+</resources>

@@ -1,16 +1,14 @@
 package com.petcare.companionlite.ui.report
 
 import com.petcare.companionlite.R
+import com.petcare.companionlite.ui.components.BobbingEmoji
+import com.petcare.companionlite.ui.components.popIn
 
 import androidx.compose.ui.res.stringResource
 
 import android.app.Application
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,18 +27,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -48,7 +44,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -146,6 +141,7 @@ fun WeeklyReportScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.ui_1e41a8f690), fontWeight = FontWeight.Bold) },
@@ -156,7 +152,9 @@ fun WeeklyReportScreen(
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface
-                )
+                ),
+                // The NavHost host already applies the status bar inset; a second one leaves an empty band.
+                windowInsets = WindowInsets(0, 0, 0, 0),
             )
         }
     ) { innerPadding ->
@@ -176,7 +174,7 @@ fun WeeklyReportScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("🐾", style = MaterialTheme.typography.displayLarge)
+                    BobbingEmoji(emoji = "🐾", size = 72.dp)
                     Text(
                         stringResource(R.string.ui_8c48f89bdb),
                         style = MaterialTheme.typography.headlineSmall,
@@ -203,29 +201,29 @@ fun WeeklyReportScreen(
                 state.reports.forEach { report ->
                     // ── Headline Card ──────────────────────────────
                     item(key = "headline_${report.petName}") {
-                        ReportHeadlineCard(report)
+                        ReportHeadlineCard(report, Modifier.popIn(0))
                     }
 
                     // ── Stats Grid ─────────────────────────────────
                     item(key = "stats_${report.petName}") {
-                        ReportStatsRow(report)
+                        ReportStatsRow(report, Modifier.popIn(1))
                     }
 
                     // ── Consistency Score ────────────────────────
                     item(key = "progress_${report.petName}") {
-                        ConsistencyScoreCard(report)
+                        ConsistencyScoreCard(report, Modifier.popIn(2))
                     }
 
                     // ── Next Week Goal ─────────────────────────────
                     item(key = "goal_${report.petName}") {
-                        NextWeekGoalCard(report)
+                        NextWeekGoalCard(report, Modifier.popIn(3))
                     }
 
                     // ── Share Button ───────────────────────────────
                     item(key = "share_${report.petName}") {
                         OutlinedButton(
                             onClick = { onShare(report) },
-                            modifier = Modifier.fillMaxWidth().height(50.dp),
+                            modifier = Modifier.fillMaxWidth().height(50.dp).popIn(4),
                             shape = RoundedCornerShape(14.dp)
                         ) {
                             Icon(Icons.Filled.Share, null, modifier = Modifier.size(18.dp))
@@ -240,18 +238,19 @@ fun WeeklyReportScreen(
                             LockedFeatureCard(
                                 title = stringResource(R.string.ui_631642b1c2),
                                 description = stringResource(R.string.ui_641a352a37),
-                                onClick = onBuyPremium
+                                onClick = onBuyPremium,
+                                modifier = Modifier.popIn(5),
                             )
                         }
-                        
+
                         item(key = "upsell_${report.petName}") {
-                            PremiumUpsellCard(report, onBuyPremium)
+                            PremiumUpsellCard(report, onBuyPremium, Modifier.popIn(6))
                         }
                     } else {
                         item(key = "trends_${report.petName}") {
                             OutlinedButton(
                                 onClick = { /* TODO: Open Trends Screen */ },
-                                modifier = Modifier.fillMaxWidth().height(50.dp),
+                                modifier = Modifier.fillMaxWidth().height(50.dp).popIn(5),
                                 shape = RoundedCornerShape(14.dp)
                             ) {
                                 Icon(Icons.Filled.TrendingUp, null, modifier = Modifier.size(18.dp))
@@ -291,7 +290,7 @@ fun WeeklyReportScreen(
 // ── Components ────────────────────────────────────────────────────
 
 @Composable
-private fun ReportHeadlineCard(report: WeeklyReport) {
+private fun ReportHeadlineCard(report: WeeklyReport, modifier: Modifier = Modifier) {
     val gradientColors = when (report.tier) {
         EngagementTier.HIGH -> listOf(DeepSage, Sage)
         EngagementTier.MEDIUM -> listOf(Color(0xFF5E8C6A), Sage)
@@ -299,6 +298,7 @@ private fun ReportHeadlineCard(report: WeeklyReport) {
     }
 
     Card(
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(28.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
@@ -312,12 +312,17 @@ private fun ReportHeadlineCard(report: WeeklyReport) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Text(
-                        report.petEmoji,
-                        style = MaterialTheme.typography.displayMedium
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.22f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        BobbingEmoji(emoji = report.petEmoji, size = 44.dp)
+                    }
                     Column {
                         Text(
                             stringResource(R.string.ui_2ba34f0243, report.petName),
@@ -344,32 +349,32 @@ private fun ReportHeadlineCard(report: WeeklyReport) {
 }
 
 @Composable
-private fun ReportStatsRow(report: WeeklyReport) {
+private fun ReportStatsRow(report: WeeklyReport, modifier: Modifier = Modifier) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         StatMiniCard(
             emoji = "✔",
-            value = "${report.tasksCompleted}",
+            value = report.tasksCompleted,
             label = stringResource(R.string.ui_1798b3ba42),
             modifier = Modifier.weight(1f)
         )
         StatMiniCard(
             emoji = "🔥",
-            value = "${report.bestStreak}",
+            value = report.bestStreak,
             label = stringResource(R.string.ui_3b03fa8122),
             modifier = Modifier.weight(1f)
         )
         StatMiniCard(
             emoji = "📅",
-            value = "${report.daysActive}",
+            value = report.daysActive,
             label = stringResource(R.string.ui_0ebfff45ec),
             modifier = Modifier.weight(1f)
         )
         StatMiniCard(
             emoji = "📉",
-            value = "${report.missedTasks}",
+            value = report.missedTasks,
             label = stringResource(R.string.ui_b564001a58),
             modifier = Modifier.weight(1f)
         )
@@ -379,10 +384,16 @@ private fun ReportStatsRow(report: WeeklyReport) {
 @Composable
 private fun StatMiniCard(
     emoji: String,
-    value: String,
+    value: Int,
     label: String,
     modifier: Modifier = Modifier
 ) {
+    // The number counts up to its value so the stats feel alive.
+    val animatedValue by animateIntAsState(
+        targetValue = value,
+        animationSpec = tween(durationMillis = 700),
+        label = "mini-stat",
+    )
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(16.dp),
@@ -396,7 +407,7 @@ private fun StatMiniCard(
         ) {
             Text(emoji, style = MaterialTheme.typography.titleMedium)
             Text(
-                value,
+                animatedValue.toString(),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -412,7 +423,7 @@ private fun StatMiniCard(
 }
 
 @Composable
-private fun ConsistencyScoreCard(report: WeeklyReport) {
+private fun ConsistencyScoreCard(report: WeeklyReport, modifier: Modifier = Modifier) {
     val progressColor = when (report.tier) {
         EngagementTier.HIGH -> DeepSage
         EngagementTier.MEDIUM -> Honey
@@ -423,7 +434,7 @@ private fun ConsistencyScoreCard(report: WeeklyReport) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(18.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -467,13 +478,13 @@ private fun ConsistencyScoreCard(report: WeeklyReport) {
 }
 
 @Composable
-private fun NextWeekGoalCard(report: WeeklyReport) {
+private fun NextWeekGoalCard(report: WeeklyReport, modifier: Modifier = Modifier) {
     Card(
         colors = CardDefaults.cardColors(
             containerColor = Sage.copy(alpha = 0.15f)
         ),
         shape = RoundedCornerShape(18.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
@@ -514,11 +525,11 @@ private fun NextWeekGoalCard(report: WeeklyReport) {
 }
 
 @Composable
-private fun PremiumUpsellCard(report: WeeklyReport, onBuyPremium: () -> Unit) {
+private fun PremiumUpsellCard(report: WeeklyReport, onBuyPremium: () -> Unit, modifier: Modifier = Modifier) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
         shape = RoundedCornerShape(20.dp),
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
@@ -564,11 +575,11 @@ private fun PremiumUpsellCard(report: WeeklyReport, onBuyPremium: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LockedFeatureCard(title: String, description: String, onClick: () -> Unit) {
+private fun LockedFeatureCard(title: String, description: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
         shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         onClick = onClick
     ) {
         Row(

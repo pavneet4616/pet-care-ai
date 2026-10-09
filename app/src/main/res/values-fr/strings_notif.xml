@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notif_channel_medication">Rappels de médicaments</string>
+    <string name="notif_channel_medication_body">Doses de médicaments avec son et vibreur pour ne rien oublier</string>
+    <string name="notif_title_medicine">💊 C’est l’heure du médicament de %1$s</string>
+    <string name="notif_title_feed">🥣 C’est l’heure du repas de %1$s</string>
+    <string name="notif_title_walk">🦮 C’est l’heure de la balade avec %1$s</string>
+    <string name="notif_title_grooming">🛁 C’est l’heure du toilettage de %1$s</string>
+    <string name="notif_body_reminder">Appuyez pour ouvrir le journal de soins.</string>
+    <string name="notif_pet_fallback">votre animal</string>
+</resources>

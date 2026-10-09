@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ai_welcome_title">O que você quer saber sobre %1$s?</string>
+    <string name="ai_chips_heading">Perguntas frequentes</string>
+    <string name="ai_example_dog">Experimente perguntar: “Meu cachorro vomitou hoje. Devo me preocupar?”</string>
+    <string name="ai_example_cat">Experimente perguntar: “Meu gato vomitou hoje. Devo me preocupar?”</string>
+    <string name="ai_example_bird">Experimente perguntar: “Meu pássaro parou de comer hoje. Devo me preocupar?”</string>
+    <string name="ai_example_other">Experimente perguntar: “Meu animal parou de comer hoje. Devo me preocupar?”</string>
+    <string name="ai_input_counter">%1$d / %2$d</string>
+    <string name="ai_share_chooser_title">Compartilhar resposta da IA</string>
+    <string name="ai_disclaimer_default">Apenas orientação da IA. Um veterinário deve diagnosticar problemas médicos.</string>
+    <string name="ai_urgent_banner">Pode ser urgente. Entre em contato com um veterinário agora.</string>
+    <string name="ai_price_per_month">%1$s / mês</string>
+    <string name="ai_price_per_week">%1$s / semana</string>
+    <string name="ai_best_value">Melhor custo-benefício</string>
+    <string name="ai_best_value_save">Melhor custo-benefício · economize %1$d%%</string>
+</resources>

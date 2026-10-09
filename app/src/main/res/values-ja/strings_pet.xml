@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pet_action_feed">ごはん</string>
+    <string name="pet_action_walk">散歩</string>
+    <string name="pet_action_medicine">お薬</string>
+    <string name="pet_action_grooming">グルーミング</string>
+    <string name="pet_export_care_report">ケアレポートを書き出す</string>
+    <string name="pet_add_photo">写真を追加</string>
+    <string name="pet_fallback_title">ペット</string>
+    <string name="pet_fallback_subject_lower">あなたのペット</string>
+    <string name="pet_routine_title_generic">毎日のルーティン</string>
+    <string name="pet_repeat_daily">毎日</string>
+    <string name="pet_repeat_weekdays">平日</string>
+    <string name="pet_repeat_weekends">週末</string>
+    <string name="pet_routine_empty_title">まだルーティンがありません</string>
+    <string name="pet_routine_empty_body">ごはん、散歩、お薬、グルーミングのリマインダーを追加すると、%1$sに楽しい毎日のリズムが生まれます 🐾</string>
+    <string name="pet_routine_add">リマインダーを追加</string>
+    <string name="pet_routine_done">完了にする</string>
+    <string name="pet_routine_next_today">次回は今日 %1$s</string>
+    <string name="pet_routine_next_tomorrow">次回は明日 %1$s</string>
+    <string name="pet_routine_next_later">次回は%1$s %2$s</string>
+    <string name="pet_status_completed">%1$sに完了</string>
+    <string name="pet_status_pending">%1$sに予定</string>
+    <string name="pet_status_overdue">期限超過（%1$sの予定）</string>
+    <string name="pet_status_missed">見逃し（%1$sの予定）</string>
+    <string name="pet_chart_empty_title">まだ体重の記録がありません</string>
+    <string name="pet_chart_empty_body">ペットのプロフィールから体重を記録すると、ここに推移グラフが表示されます。</string>
+    <string name="pet_todo_added">✅ To-doを追加しました</string>
+    <string name="pet_note_saved">📝 メモを保存しました</string>
+</resources>

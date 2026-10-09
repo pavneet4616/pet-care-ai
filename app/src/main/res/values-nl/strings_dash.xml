@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dash_action_feed">Voeren</string>
+    <string name="dash_action_water">Water</string>
+    <string name="dash_action_walk">Wandelen</string>
+    <string name="dash_action_medicine">Medicijn</string>
+    <string name="dash_action_grooming">Verzorging</string>
+    <string name="dash_logged">Gelogd ✓</string>
+
+    <string name="dash_status_no_routine">Nog geen routine – voeg er een toe</string>
+    <string name="dash_status_nothing_due">Vandaag niets te doen 🎉</string>
+    <string name="dash_status_all_done">Vandaag alles gedaan 🎉</string>
+    <plurals name="dash_status_to_go">
+        <item quantity="one">Nog %1$d</item>
+        <item quantity="other">Nog %1$d</item>
+    </plurals>
+    <plurals name="dash_status_overdue">
+        <item quantity="one">%1$d te laat</item>
+        <item quantity="other">%1$d te laat</item>
+    </plurals>
+
+    <string name="dash_hero_no_routine">Geef %1$s een dagelijkse routine</string>
+    <string name="dash_hero_free_day">%1$s heeft een rustige dag</string>
+    <string name="dash_hero_done">%1$s is vandaag helemaal verzorgd ❤️</string>
+
+    <string name="dash_next_format">Volgende: %1$s · %2$s</string>
+    <string name="dash_when_today">Vandaag om %1$s</string>
+    <string name="dash_when_tomorrow">Morgen om %1$s</string>
+    <string name="dash_when_weekday">%1$s %2$s</string>
+    <string name="dash_word_upcoming">Komend</string>
+    <string name="dash_word_overdue">Te laat</string>
+    <string name="dash_word_missed">Gemist</string>
+    <string name="dash_task_title">%1$s: %2$s</string>
+    <string name="dash_timeline_perfect">✨ Een perfecte dag voor %1$s!</string>
+    <string name="dash_timeline_progress">%1$d van %2$d klaar, ga zo door! 💚</string>
+    <string name="dash_empty_routine_body">Open de gegevens van %1$s om een dagelijkse herinnering in te stellen en een reeks te starten.</string>
+
+    <string name="dash_done_of_total">%1$d van %2$d klaar</string>
+    <plurals name="dash_pending_count">
+        <item quantity="one">%1$d open</item>
+        <item quantity="other">%1$d open</item>
+    </plurals>
+    <plurals name="dash_streak_days">
+        <item quantity="one">%1$d dag</item>
+        <item quantity="other">%1$d dagen</item>
+    </plurals>
+    <plurals name="dash_streak_badge">
+        <item quantity="one">🔥 %1$d dag op rij</item>
+        <item quantity="other">🔥 %1$d dagen op rij</item>
+    </plurals>
+
+    <string name="dash_goal_habit">Gewoonte van 3 dagen</string>
+    <string name="dash_goal_streak">Reeks van 7 dagen</string>
+    <string name="dash_goal_champion">Kampioen van 30 dagen</string>
+    <string name="dash_goal_legendary">Legendarisch!</string>
+
+    <string name="dash_summary_done">Klaar</string>
+    <string name="dash_summary_pending">Open</string>
+    <string name="dash_summary_streak">Reeks</string>
+
+    <string name="dash_pet_fallback">je huisdier</string>
+    <string name="dash_pet_fallback_cap">Je huisdier</string>
+    <string name="dash_cd_dismiss">Sluiten</string>
+</resources>

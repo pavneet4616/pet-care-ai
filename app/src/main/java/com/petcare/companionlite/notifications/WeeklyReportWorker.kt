@@ -1,21 +1,16 @@
 package com.petcare.companionlite.notifications
 
-import android.Manifest
 import com.petcare.companionlite.core.inAppLanguage
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
+import android.net.Uri
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import com.petcare.companionlite.MainActivity
 import com.petcare.companionlite.PetCareApplication
 import com.petcare.companionlite.R
 import com.petcare.companionlite.core.PetStateEngine
@@ -91,25 +86,16 @@ class WeeklyReportWorker(
             settingsStore.setLastReportTimestamp(nowMillis)
 
             // Send notification
-            if (android.os.Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(
-                    applicationContext, Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                val intent = Intent(applicationContext, MainActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                    putExtra(EXTRA_OPEN_WEEKLY_REPORT, true)
-                }
-                val pendingIntent = PendingIntent.getActivity(
+            if (NotificationSupport.canPost(applicationContext)) {
+                val pendingIntent = NotificationSupport.openAppIntent(
                     applicationContext,
                     NOTIFICATION_ID,
-                    intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-                )
+                    Uri.parse("petcare://open/weekly"),
+                ) {
+                    putExtra(EXTRA_OPEN_WEEKLY_REPORT, true)
+                }
 
-                val notification = NotificationCompat.Builder(
-                    applicationContext, NotificationChannels.WEEKLY_REPORT
-                )
-                    .setSmallIcon(R.drawable.ic_launcher_foreground)
+                val notification = NotificationSupport.builder(applicationContext, NotificationChannels.WEEKLY_REPORT)
                     .setContentTitle(headline) // Personalized CTA
                     .setContentText(body)
                     .setStyle(NotificationCompat.BigTextStyle().bigText(body))
@@ -118,7 +104,11 @@ class WeeklyReportWorker(
                     .setAutoCancel(true)
                     .build()
 
-                NotificationManagerCompat.from(applicationContext).notify(NOTIFICATION_ID, notification)
+                try {
+                    NotificationManagerCompat.from(applicationContext).notify(NOTIFICATION_ID, notification)
+                } catch (_: SecurityException) {
+                    // Notification permission was revoked after canPost() checked it.
+                }
             }
 
             // Self-reschedule for next week
@@ -144,8 +134,14 @@ class WeeklyReportWorker(
          * Schedule a one-time work request.
          * If [delayHours] is provided, it simply delays by that amount.
          * Otherwise, it calculates the next Sunday at [preferredHour].
+         * [policy] defaults to REPLACE; cold starts pass KEEP so an existing schedule is not reset.
          */
-        fun enqueue(context: Context, preferredHour: Int = 20, delayHours: Int = 0) {
+        fun enqueue(
+            context: Context,
+            preferredHour: Int = 20,
+            delayHours: Int = 0,
+            policy: ExistingWorkPolicy = ExistingWorkPolicy.REPLACE,
+        ) {
             val zoneId = ZoneId.systemDefault()
             val now = ZonedDateTime.now(zoneId)
 
@@ -174,7 +170,7 @@ class WeeklyReportWorker(
 
             WorkManager.getInstance(context).enqueueUniqueWork(
                 UNIQUE_NAME,
-                ExistingWorkPolicy.REPLACE, // Always replace so logic/timezone changes win
+                policy,
                 request,
             )
         }

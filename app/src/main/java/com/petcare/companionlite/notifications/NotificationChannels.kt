@@ -9,6 +9,8 @@ import com.petcare.companionlite.core.inAppLanguage
 
 object NotificationChannels {
     const val ROUTINE = "routine_reminders"
+    /** Medicine doses: high importance so they show as heads-up with sound and vibration. */
+    const val MEDICATION = "medication_reminders"
     const val WEEKLY_REPORT = "weekly_report"
     const val AI_FOLLOWUP = "ai_followup"
 
@@ -23,6 +25,17 @@ object NotificationChannels {
                 NotificationManager.IMPORTANCE_DEFAULT,
             ).apply {
                 description = localized.getString(R.string.channel_routine_body)
+            },
+        )
+        manager.createNotificationChannel(
+            NotificationChannel(
+                MEDICATION,
+                localized.getString(R.string.notif_channel_medication),
+                NotificationManager.IMPORTANCE_HIGH,
+            ).apply {
+                description = localized.getString(R.string.notif_channel_medication_body)
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 250, 250, 250)
             },
         )
         manager.createNotificationChannel(
@@ -45,4 +58,3 @@ object NotificationChannels {
         )
     }
 }
-

@@ -9,7 +9,7 @@
     <string name="care_walk">una passeggiata</string>
     <string name="care_medicine">medicina</string>
     <string name="care_grooming">pulizia</string>
-    <string name="app_name">Cura per animali domestici</string>
+    <string name="app_name">Pet Care AI</string>
     <string name="settings">Impostazioni</string>
     <string name="back">Indietro</string>
     <string name="cancel">Annulla</string>
@@ -68,8 +68,8 @@
     <string name="export_pet_data">Esporta i dati del pet</string>
     <string name="pet_data_local">I record del pet sono archiviati su questo dispositivo.</string>
     <string name="ai_chats_local">Le chat con l\'AI sono archiviate localmente e non vengono caricate come cronologia completa.</string>
-    <string name="petcare_pro">PetCare Pro</string>
-    <string name="upgrade_to_pro">Passa a PetCare Pro</string>
+    <string name="petcare_pro">Pet Care AI Pro</string>
+    <string name="upgrade_to_pro">Passa a Pet Care AI Pro</string>
     <string name="pro_card_subtitle">Più domande AI, riassunti di cura e nessuna pubblicità</string>
     <string name="explore_pro">Esplora Pro</string>
     <string name="pro_monthly_active">Piano mensile · Attivo</string>
@@ -85,23 +85,23 @@
     <string name="ai_safety">Guida e sicurezza dell\'AI</string>
     <string name="ai_safety_body">Le risposte dell\'AI sono informazioni di carattere generale. L\'AI può commettere errori. Non può diagnosticare il tuo animale domestico. In caso di sintomi gravi o emergenze, contatta un veterinario.</string>
     <string name="delete_local_data">Elimina tutti i dati locali</string>
-    <string name="delete_all_title">Eliminare tutti i dati di PetCare?</string>
+    <string name="delete_all_title">Eliminare tutti i dati di Pet Care AI?</string>
     <string name="delete_all_body">Questo rimuove permanentemente i registri locali, le foto, le impostazioni e gli avvisi programmati, e programma la cancellazione dei report del server e dei collegamenti di acquisto. I contatori di quota anonimi, i marcatori di ricevuta e l\'autenticazione dell\'installazione rimangono per prevenire abusi e supportare il ripristino degli acquisti. Questo non può essere annullato.</string>
     <string name="delete_everything">Elimina tutto</string>
-    <string name="rate_us">Valuta PetCare</string>
+    <string name="rate_us">Valuta Pet Care AI</string>
     <string name="share_app">Condividi l\'app</string>
     <string name="contact_support">Contatta il supporto</string>
     <string name="terms_of_service">Termini di servizio</string>
     <string name="privacy_policy">Informativa sulla privacy</string>
     <string name="visit_website">Visita il sito web</string>
     <string name="read_full_privacy_policy">Leggi l\'intera policy sulla privacy</string>
-    <string name="about_petcare">Informazioni su PetCare</string>
+    <string name="about_petcare">Informazioni su Pet Care AI</string>
     <string name="about_tagline">Cura in modo intelligente. Amare meglio.</string>
     <string name="about_made">Creato per i proprietari di animali</string>
     <string name="version_label">Versione %1$s</string>
     <string name="no_email_app">Nessun\'app email installata</string>
     <string name="share_subject">Pet Care AI</string>
-    <string name="share_text">Sto utilizzando Pet Care AI per prendfarmi cura dei miei animali: https://play.google.com/store/apps/details?id=%1$s</string>
+    <string name="share_text">Sto utilizzando Pet Care AI per prendermi cura dei miei animali: https://play.google.com/store/apps/details?id=%1$s</string>
     <string name="legal_placeholder">Le risposte dell\'AI sono solo un orientamento — un veterinario dovrebbe diagnosticare problemi medici. Leggi la Policy sulla privacy e i Termini e Condizioni sul nostro sito web.</string>
     <string name="notif_master">Notifiche</string>
     <string name="notif_care">Cura</string>
@@ -273,7 +273,7 @@
     <string name="ui_56a07c9344">Sei offline. La tua domanda è stata salvata.</string>
     <string name="ui_56d60cdf15">Attiva Premium — %1$s</string>
     <string name="ui_593f82b8e9">%1$s / %2$s giorni — %3$s da fare!</string>
-    <string name="ui_5a6c406b47">Benvenuto in PetCare</string>
+    <string name="ui_5a6c406b47">Benvenuto in Pet Care AI</string>
     <string name="ui_5aa334466c">Puoi aggiungere più promemoria in seguito</string>
     <string name="ui_5f3f0e5677">%1$s %2$s è pronto per una splendida giornata!</string>
     <string name="ui_629814075e">Grazie per il feedback</string>
@@ -327,7 +327,7 @@
     <string name="ui_a798882f1c">Bloccato</string>
     <string name="ui_a7e296c636">Passaggi di primo soccorso rapido in modalità offline per momenti urgenti.</string>
     <string name="ui_aa185a5a19">Che tipo di animale domestico hai?</string>
-    <string name="ui_adefb758a0">🐾 PetCare</string>
+    <string name="ui_adefb758a0">🐾 Pet Care AI</string>
     <string name="ui_adfbf75c4f">🐾 %1$s</string>
     <string name="ui_ae601382c0">📷 Aggiungi una foto di %1$s!</string>
     <string name="ui_af240977b3">%1$s\'s 🔥%2$s giorni di streak stanno svanendo!</string>
@@ -406,7 +406,7 @@
     <string name="ui_0c6629aa97">Inizia la tua serie registrando la cura oggi!</string>
     <string name="ui_0ebfff45ec">Giorni attivi</string>
     <string name="ui_0fa251c1f3">⚠️ Scaduto — tocca per registrare ora</string>
-    <string name="ui_167d73fe66">🚶 Passeggia </string>
+    <string name="ui_167d73fe66">"🚶 Passeggia "</string>
     <string name="ui_1798b3ba42">Completato</string>
     <string name="ui_17cd91a7ad">✅ Completato alle %1$s</string>
     <string name="ui_1cd0c04e4e">Gestisci la cura dei tuoi compagni ❤️</string>
@@ -433,7 +433,7 @@
     <string name="ui_4bd2913945">Neutro</string>
     <string name="ui_4cd769c70c">Il mio animale aveva un incidente di salute. Cosa devo osservare?</string>
     <string name="ui_4e728e6c43">Sono disponibili solo i piani Pro settimanali e mensili.</string>
-    <string name="ui_564e4ea45e">Ricordo impostato %1$s</string>
+    <string name="ui_564e4ea45e">Promemoria %1$s impostato</string>
     <string name="ui_5abf190b0a">Errore del servizio AI (%1$d). La tua domanda è stata salvata — tocca Riprova.</string>
     <string name="ui_5ec089c9b1">il tuo animale</string>
     <string name="ui_62e50884f4">❌ Finestra mancata</string>
@@ -447,7 +447,7 @@
     <string name="ui_684feeab23">🟢 3 giorni di seguito — costruendo un\'abitudine!</string>
     <string name="ui_6def274b9c">Ami i tuoi animali? 🐾 Premium offre animali illimitati + esportazione in PDF</string>
     <string name="ui_6e37fc3377">Hai già effettuato l\'accesso da poco. Abbiamo ignorato il tocco duplicato.</string>
-    <string name="ui_6e4975afd1">Acquisto ricevuto ma l\'acknowledgement è fallito. Si prega di riprovare ad aprire l\'app.</string>
+    <string name="ui_6e4975afd1">Acquisto ricevuto ma la conferma è fallita. Riprova ad aprire l\'app.</string>
     <string name="ui_6e6a6f2086">Altro</string>
     <string name="ui_6f345fa2ac">Amato</string>
     <string name="ui_7060f7b75c">Dammi un semplice consiglio per addestrare il mio animale.</string>
@@ -487,7 +487,7 @@
     <string name="ui_bf3c264a52">pawThinking</string>
     <string name="ui_c29ae41e17">Play Billing disconnesso. Riproveremo quando l\'app riprenderà.</string>
     <string name="ui_c59b6c9c51">Già inviato. La tua conversazione ha già questa risposta.</string>
-    <string name="ui_c62b29a9e8">Saltato: </string>
+    <string name="ui_c62b29a9e8">"Saltato: "</string>
     <string name="ui_c8032e9b51">Scrivi prima una domanda.</string>
     <string name="ui_c90341fee7">⏰ Programmato per oggi</string>
     <string name="ui_cbcdb86a6a">💰 $%1$s spesa registrata!</string>
@@ -495,7 +495,7 @@
     <string name="ui_cc55c6931b">Consiglio non sicuro</string>
     <string name="ui_d080f7cc4f">Perché il mio animale ha un comportamento diverso?</string>
     <string name="ui_d0aec35d5d">Sei in forma 🔥! Ottieni approfondimenti più completi con Premium</string>
-    <string name="ui_d0c2eac900">💧 Acqua </string>
+    <string name="ui_d0c2eac900">"💧 Acqua "</string>
     <string name="ui_d1eb45176a">Indicazioni generali</string>
     <string name="ui_d62455077a">Nessun incidente registrato finora</string>
     <string name="ui_d6390cdbba">🥺 Triste</string>
@@ -505,16 +505,16 @@
     <string name="ui_e0c705d18e">Passeggiata</string>
     <string name="ui_e21aba7108">%1$s note</string>
     <string name="ui_e2adafc1b0">Registro della salute rimosso</string>
-    <string name="ui_e35ff979bb">🥣 Cibo </string>
+    <string name="ui_e35ff979bb">"🥣 Cibo "</string>
     <string name="ui_e542695cd3">Nessun compito</string>
     <string name="ui_e7265e5c07">Costruire una abitudine! 🟢 Premium sblocca statistiche avanzate</string>
     <string name="ui_ec0f106980">Monitora</string>
-    <string name="ui_ec82d657e3">Prossimo: </string>
+    <string name="ui_ec82d657e3">"Prossimo: "</string>
     <string name="ui_ecb26f46e3">Urgente</string>
     <string name="ui_edb418b42a">Come devo curare il mio animale domestico a casa?</string>
-    <string name="ui_efb8e2b275">Scaduto: </string>
+    <string name="ui_efb8e2b275">"Scaduto: "</string>
     <string name="ui_f08cf0fe15">Il mio animale domestico</string>
-    <string name="ui_f1001de751">💊 Farmaci </string>
+    <string name="ui_f1001de751">"💊 Farmaci "</string>
     <string name="ui_f401f582e6">Note e Compiti</string>
     <string name="ui_f935d78685">Fatto ✅</string>
     <string name="ui_fa4eedd21a">%1$s salvato</string>
@@ -571,7 +571,7 @@
     <string name="emergency_ask_ai">Fai domande all\'AI mentre contatti un veterinario</string>
     <string name="followup_title">Come sta %1$s oggi?</string>
     <string name="followup_body">Hai registrato un\'osservazione sanitaria. Tocca per aggiungere un aggiornamento.</string>
-    <string name="followup_prompt">Ho registrato un\'osservazione sanitaria per %1$s ieri. Oggi sto notando: </string>
+    <string name="followup_prompt">"Ho registrato un\'osservazione sanitaria per %1$s ieri. Oggi sto notando: "</string>
     <string name="channel_routine">Promemoria per la cura</string>
     <string name="channel_routine_body">Promemoria per alimentazione, passeggiate, farmaci e igiene</string>
     <string name="channel_weekly">Riepilogo settimanale</string>
@@ -614,7 +614,7 @@
     <string name="billing_supported_plans">Sono disponibili solo piani Pro settimanali e mensili.</string>
     <string name="billing_load_failed">Impossibile caricare i piani Pro da Google Play.</string>
     <string name="billing_plans_unavailable">I piani Pro sono temporaneamente non disponibili. Riprova più tardi.</string>
-    <string name="billing_offer_unavailable">Questo offerta non è disponibile. Aggiorna i piani e riprova.</string>
+    <string name="billing_offer_unavailable">Questa offerta non è disponibile. Aggiorna i piani e riprova.</string>
     <string name="health_incident_prompt">Il mio animale ha avuto un incidente di salute: %1$s. Cosa devo fare?</string>
     <string name="health_incident_details">Dettagli (colore, contenuti, orario)</string>
     <string name="emergency_ai_prompt">Potrebbe essere urgente. Quali passaggi sicuri posso fare ora mentre contatto il mio veterinario?</string>

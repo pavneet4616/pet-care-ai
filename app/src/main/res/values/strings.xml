@@ -72,8 +72,8 @@
     <string name="pet_data_local">Pet records are stored on this device.</string>
     <string name="ai_chats_local">AI chats are stored locally and not uploaded as a full history.</string>
 
-    <string name="petcare_pro">PetCare Pro</string>
-    <string name="upgrade_to_pro">Upgrade to PetCare Pro</string>
+    <string name="petcare_pro">Pet Care AI Pro</string>
+    <string name="upgrade_to_pro">Upgrade to Pet Care AI Pro</string>
     <string name="pro_card_subtitle">More AI questions, care summaries and no ads</string>
     <string name="explore_pro">Explore Pro</string>
     <string name="pro_monthly_active">Monthly plan · Active</string>
@@ -90,11 +90,11 @@
     <string name="ai_safety">AI guidance &amp; safety</string>
     <string name="ai_safety_body">AI responses are informational guidance. AI can make mistakes. It cannot diagnose your pet. For serious symptoms or emergencies, contact a veterinarian.</string>
     <string name="delete_local_data">Delete all local data</string>
-    <string name="delete_all_title">Delete all PetCare data?</string>
+    <string name="delete_all_title">Delete all Pet Care AI data?</string>
     <string name="delete_all_body">This permanently removes local records, photos, settings and scheduled reminders, and queues deletion of server reports and purchase bindings. Anonymous quota counters, receipt markers and installation authentication remain to prevent abuse and support purchase restore. This cannot be undone.</string>
     <string name="delete_everything">Delete everything</string>
 
-    <string name="rate_us">Rate PetCare</string>
+    <string name="rate_us">Rate Pet Care AI</string>
     <string name="share_app">Share app</string>
     <string name="contact_support">Contact support</string>
     <string name="terms_of_service">Terms of service</string>
@@ -105,7 +105,7 @@
     <string name="support_email" translatable="false">neetpav786@gmail.com</string>
     <string name="visit_website">Visit website</string>
     <string name="read_full_privacy_policy">Read full privacy policy</string>
-    <string name="about_petcare">About PetCare</string>
+    <string name="about_petcare">About Pet Care AI</string>
     <string name="about_tagline">Care smarter. Love better.</string>
     <string name="about_made">Made for pet parents</string>
     <string name="version_label">Version %1$s</string>
@@ -277,7 +277,7 @@
     <string name="ui_56a07c9344">You\'re offline. Your question was kept.</string>
     <string name="ui_56d60cdf15">Unlock Premium — %1$s</string>
     <string name="ui_593f82b8e9">%1$s / %2$s days — %3$s more to go!</string>
-    <string name="ui_5a6c406b47">Welcome to PetCare</string>
+    <string name="ui_5a6c406b47">Welcome to Pet Care AI</string>
     <string name="ui_5aa334466c">You can add more reminders later</string>
     <string name="ui_5f3f0e5677">%1$s %2$s is ready for a wonderful day!</string>
     <string name="ui_629814075e">Thanks for the feedback</string>
@@ -331,7 +331,7 @@
     <string name="ui_a798882f1c">Locked</string>
     <string name="ui_a7e296c636">Quick offline first-aid steps for urgent moments.</string>
     <string name="ui_aa185a5a19">What kind of pet do you have?</string>
-    <string name="ui_adefb758a0">🐾 PetCare</string>
+    <string name="ui_adefb758a0">🐾 Pet Care AI</string>
     <string name="ui_adfbf75c4f">🐾 %1$s</string>
     <string name="ui_ae601382c0">📷 Add a photo of %1$s!</string>
     <string name="ui_af240977b3">%1$s\'s 🔥%2$s-day streak is fading!</string>
@@ -410,7 +410,7 @@
     <string name="ui_0c6629aa97">Start your streak by logging care today!</string>
     <string name="ui_0ebfff45ec">Active Days</string>
     <string name="ui_0fa251c1f3">⚠️ Overdue — tap to log now</string>
-    <string name="ui_167d73fe66">🚶 Walk </string>
+    <string name="ui_167d73fe66">"🚶 Walk "</string>
     <string name="ui_1798b3ba42">Completed</string>
     <string name="ui_17cd91a7ad">✅ Completed at %1$s</string>
     <string name="ui_1cd0c04e4e">Manage care for your companions ❤️</string>
@@ -491,7 +491,7 @@
     <string name="ui_bf3c264a52">pawThinking</string>
     <string name="ui_c29ae41e17">Play Billing disconnected. We\'ll retry when the app resumes.</string>
     <string name="ui_c59b6c9c51">Already sent. Your conversation already has this answer.</string>
-    <string name="ui_c62b29a9e8">Missed: </string>
+    <string name="ui_c62b29a9e8">"Missed: "</string>
     <string name="ui_c8032e9b51">Type a question first.</string>
     <string name="ui_c90341fee7">⏰ Scheduled for today</string>
     <string name="ui_cbcdb86a6a">💰 $%1$s expense logged!</string>
@@ -499,7 +499,7 @@
     <string name="ui_cc55c6931b">Unsafe advice</string>
     <string name="ui_d080f7cc4f">Why is my pet behaving differently?</string>
     <string name="ui_d0aec35d5d">You\'re on a 🔥 roll! Unlock deeper insights with Premium</string>
-    <string name="ui_d0c2eac900">💧 Water </string>
+    <string name="ui_d0c2eac900">"💧 Water "</string>
     <string name="ui_d1eb45176a">General guidance</string>
     <string name="ui_d62455077a">No incidents logged yet</string>
     <string name="ui_d6390cdbba">🥺 Sad</string>
@@ -509,16 +509,16 @@
     <string name="ui_e0c705d18e">Walk</string>
     <string name="ui_e21aba7108">%1$s notes</string>
     <string name="ui_e2adafc1b0">Health log removed</string>
-    <string name="ui_e35ff979bb">🥣 Food </string>
+    <string name="ui_e35ff979bb">"🥣 Food "</string>
     <string name="ui_e542695cd3">No tasks</string>
     <string name="ui_e7265e5c07">Building a habit! 🟢 Premium unlocks advanced stats</string>
     <string name="ui_ec0f106980">Monitor</string>
-    <string name="ui_ec82d657e3">Upcoming: </string>
+    <string name="ui_ec82d657e3">"Upcoming: "</string>
     <string name="ui_ecb26f46e3">Urgent</string>
     <string name="ui_edb418b42a">How should I groom my pet at home?</string>
-    <string name="ui_efb8e2b275">Overdue: </string>
+    <string name="ui_efb8e2b275">"Overdue: "</string>
     <string name="ui_f08cf0fe15">My Pet</string>
-    <string name="ui_f1001de751">💊 Meds </string>
+    <string name="ui_f1001de751">"💊 Meds "</string>
     <string name="ui_f401f582e6">Notes &amp; To-Dos</string>
     <string name="ui_f935d78685">All done ✅</string>
     <string name="ui_fa4eedd21a">%1$s saved</string>
@@ -575,7 +575,7 @@
     <string name="emergency_ask_ai">Ask AI while contacting a vet</string>
     <string name="followup_title">How is %1$s today?</string>
     <string name="followup_body">You recorded a health observation. Tap to add an update.</string>
-    <string name="followup_prompt">I recorded a health observation for %1$s yesterday. Today I am noticing: </string>
+    <string name="followup_prompt">"I recorded a health observation for %1$s yesterday. Today I am noticing: "</string>
     <string name="channel_routine">Care reminders</string>
     <string name="channel_routine_body">Feeding, walking, medicine and grooming reminders</string>
     <string name="channel_weekly">Weekly care summary</string>

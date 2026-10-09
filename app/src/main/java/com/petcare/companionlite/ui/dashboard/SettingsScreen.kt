@@ -1,12 +1,13 @@
 package com.petcare.companionlite.ui.dashboard
 
-import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -83,6 +84,9 @@ import com.petcare.companionlite.data.model.AiResponseStyle
 import com.petcare.companionlite.data.model.SettingsState
 import com.petcare.companionlite.data.model.ThemeMode
 import com.petcare.companionlite.ui.ai.AiPaywallSheet
+import com.petcare.companionlite.ui.components.BobbingEmoji
+import com.petcare.companionlite.ui.components.bouncyPress
+import com.petcare.companionlite.ui.components.popIn
 import com.petcare.companionlite.ui.theme.PremiumGold
 import kotlinx.coroutines.launch
 
@@ -208,12 +212,21 @@ fun SettingsScreen(
                 SettingsPage.ABOUT -> AboutPage()
             }
             if (page == SettingsPage.HOME) {
-                Text(
-                    stringResource(R.string.version_label, BuildConfig.VERSION_NAME),
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 24.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f),
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp, bottom = 24.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    BobbingEmoji(emoji = "🐾", size = 22.dp)
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        stringResource(R.string.version_label, BuildConfig.VERSION_NAME),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f),
+                    )
+                }
             }
         }
     }
@@ -291,58 +304,33 @@ private fun SettingsHome(
     onPrivacyChoices: () -> Unit,
 ) {
     SectionLabel(stringResource(R.string.section_general))
-    SettingsCard {
+    SettingsCard(staggerIndex = 0) {
         SettingsRow(Icons.Filled.Language, stringResource(R.string.app_language), if (settings.appLanguageTag.isNullOrBlank()) stringResource(R.string.system_default) else AppLocale.displayName(settings.appLanguageTag)) { onOpen(SettingsPage.LANGUAGE) }
         SettingsRow(Icons.Filled.DarkMode, stringResource(R.string.appearance), themeLabel(settings.themeMode)) { onOpen(SettingsPage.APPEARANCE) }
         SettingsRow(Icons.Filled.Notifications, stringResource(R.string.notifications), stringResource(R.string.notifications_subtitle), showBottomDivider = false) { onOpen(SettingsPage.NOTIFICATIONS) }
     }
 
     SectionLabel(stringResource(R.string.section_ai))
-    SettingsCard {
+    SettingsCard(staggerIndex = 1) {
         SettingsRow(Icons.Filled.SmartToy, stringResource(R.string.ai_preferences), stringResource(R.string.ai_preferences_subtitle)) { onOpen(SettingsPage.AI_PREFS) }
         SettingsRow(Icons.Filled.History, stringResource(R.string.chat_history), stringResource(R.string.chat_history_subtitle)) { onOpen(SettingsPage.CHAT_HISTORY) }
         SettingsRow(Icons.Filled.Delete, stringResource(R.string.clear_ai_chats), showBottomDivider = false, onClick = onClearChats)
     }
 
     SectionLabel(stringResource(R.string.section_pet_data))
-    SettingsCard {
+    SettingsCard(staggerIndex = 2) {
         SettingsRow(Icons.Filled.Pets, stringResource(R.string.manage_pets), "$petCount", onClick = onManagePets)
         SettingsRow(Icons.Filled.Storage, stringResource(R.string.data_storage), showBottomDivider = false) { onOpen(SettingsPage.DATA) }
     }
 
     SectionLabel(stringResource(R.string.section_premium))
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = if (isPro) MaterialTheme.colorScheme.primaryContainer
-            else PremiumGold.copy(alpha = 0.16f),
-        ),
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenPro),
-    ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Filled.WorkspacePremium, null, tint = PremiumGold, modifier = Modifier.size(28.dp))
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    if (isPro) stringResource(R.string.petcare_pro) else stringResource(R.string.upgrade_to_pro),
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    if (isPro) stringResource(R.string.pro_access_active) else stringResource(R.string.pro_card_subtitle),
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                )
-            }
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
-        }
-    }
-    SettingsCard {
+    PremiumCard(isPro = isPro, staggerIndex = 3, onClick = onOpenPro)
+    SettingsCard(staggerIndex = 4) {
         SettingsRow(Icons.Filled.Restore, stringResource(R.string.restore_purchases), showBottomDivider = false, onClick = onRestore)
     }
 
     SectionLabel(stringResource(R.string.section_privacy))
-    SettingsCard {
+    SettingsCard(staggerIndex = 5) {
         SettingsRow(Icons.Filled.Lock, stringResource(R.string.privacy)) { onOpen(SettingsPage.PRIVACY) }
         if (privacyOptionsRequired) {
             SettingsRow(Icons.Filled.Lock, stringResource(R.string.privacy_choices), onClick = onPrivacyChoices)
@@ -353,7 +341,7 @@ private fun SettingsHome(
     }
 
     SectionLabel(stringResource(R.string.section_help))
-    SettingsCard {
+    SettingsCard(staggerIndex = 6) {
         SettingsRow(Icons.Filled.Star, stringResource(R.string.rate_us), onClick = onRate)
         SettingsRow(Icons.Filled.Share, stringResource(R.string.share_app), onClick = onShare)
         SettingsRow(
@@ -366,7 +354,7 @@ private fun SettingsHome(
     }
 
     SectionLabel(stringResource(R.string.section_about))
-    SettingsCard {
+    SettingsCard(staggerIndex = 7) {
         SettingsRow(Icons.Filled.Info, stringResource(R.string.about_petcare), showBottomDivider = false) { onOpen(SettingsPage.ABOUT) }
     }
 }
@@ -416,22 +404,28 @@ private fun NotificationsPage(
         exactAllowed = scheduler.exactAlarmsAllowed()
         onPauseOrDispose { }
     }
-    SettingsCard {
-        Text(stringResource(if (exactAllowed) R.string.medication_alarm_precise else R.string.medication_alarm_delayed))
+    SettingsCard(staggerIndex = 0) {
+        Text(
+            stringResource(if (exactAllowed) R.string.medication_alarm_precise else R.string.medication_alarm_delayed),
+            modifier = Modifier.padding(16.dp),
+        )
         if (!exactAllowed && android.os.Build.VERSION.SDK_INT >= 31) {
             TextButton(onClick = {
-                context.startActivity(Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}")))
+                startIntentSafely(
+                    context,
+                    Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}")),
+                )
             }) { Text(stringResource(R.string.enable_precise_alarms)) }
         }
     }
     SectionLabel(stringResource(R.string.notif_care))
-    SettingsCard {
+    SettingsCard(staggerIndex = 1) {
         SettingsSwitchRow(stringResource(R.string.notif_feeding), settings.feedingNotifications) { scope.launch { store.setFeedingNotifications(it) } }
         SettingsSwitchRow(stringResource(R.string.notif_medicine), settings.medicineNotifications) { scope.launch { store.setMedicineNotifications(it) } }
         SettingsSwitchRow(stringResource(R.string.notif_walk), settings.walkNotifications, showBottomDivider = false) { scope.launch { store.setWalkNotifications(it) } }
     }
     SectionLabel(stringResource(R.string.notif_companion))
-    SettingsCard {
+    SettingsCard(staggerIndex = 2) {
         SettingsSwitchRow(stringResource(R.string.notif_health), settings.healthFollowUps) { scope.launch { store.setHealthFollowUps(it) } }
         SettingsSwitchRow(stringResource(R.string.notif_weekly), settings.weeklySummary, showBottomDivider = false) { scope.launch { store.setWeeklySummary(it) } }
     }
@@ -564,13 +558,47 @@ private fun SectionLabel(text: String) {
     )
 }
 
+/** Rounded group of rows. [staggerIndex] staggers the one-shot pop-in between groups. */
 @Composable
-private fun SettingsCard(content: @Composable () -> Unit) {
+private fun SettingsCard(staggerIndex: Int = 0, content: @Composable () -> Unit) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        modifier = Modifier.fillMaxWidth().popIn(staggerIndex),
     ) { Column { content() } }
+}
+
+@Composable
+private fun PremiumCard(isPro: Boolean, staggerIndex: Int, onClick: () -> Unit) {
+    val source = remember { MutableInteractionSource() }
+    Card(
+        onClick = onClick,
+        interactionSource = source,
+        colors = CardDefaults.cardColors(
+            containerColor = if (isPro) MaterialTheme.colorScheme.primaryContainer
+            else PremiumGold.copy(alpha = 0.16f),
+        ),
+        shape = RoundedCornerShape(22.dp),
+        modifier = Modifier.fillMaxWidth().popIn(staggerIndex).bouncyPress(source),
+    ) {
+        Row(modifier = Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.WorkspacePremium, null, tint = PremiumGold, modifier = Modifier.size(30.dp))
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    if (isPro) stringResource(R.string.petcare_pro) else stringResource(R.string.upgrade_to_pro),
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    if (isPro) stringResource(R.string.pro_access_active) else stringResource(R.string.pro_card_subtitle),
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                )
+            }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+        }
+    }
 }
 
 @Composable
@@ -581,16 +609,21 @@ private fun SettingsRow(
     showBottomDivider: Boolean = true,
     onClick: () -> Unit,
 ) {
+    val source = remember { MutableInteractionSource() }
     Column {
         Row(
-            modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .bouncyPress(source)
+                .clickable(interactionSource = source, indication = LocalIndication.current, onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
-                modifier = Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant),
+                modifier = Modifier.size(42.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(22.dp))
             }
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -613,9 +646,14 @@ private fun SettingsRadioRow(
     onClick: () -> Unit,
     showBottomDivider: Boolean = true,
 ) {
+    val source = remember { MutableInteractionSource() }
     Column {
         Row(
-            modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 4.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .bouncyPress(source)
+                .clickable(interactionSource = source, indication = LocalIndication.current, onClick = onClick)
+                .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             RadioButton(selected = selected, onClick = onClick)
@@ -660,10 +698,11 @@ private fun themeLabel(mode: ThemeMode): String = when (mode) {
 
 private fun rateApp(context: Context) {
     val packageName = context.packageName
-    try {
+    val openedInStore = runCatching {
         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName")))
-    } catch (_: ActivityNotFoundException) {
-        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName")))
+    }.isSuccess
+    if (!openedInStore) {
+        openUrl(context, "https://play.google.com/store/apps/details?id=$packageName")
     }
 }
 
@@ -673,25 +712,26 @@ private fun shareApp(context: Context) {
         putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.share_subject))
         putExtra(Intent.EXTRA_TEXT, context.getString(R.string.share_text, context.packageName))
     }
-    context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.share_app)))
+    startIntentSafely(context, Intent.createChooser(shareIntent, context.getString(R.string.share_app)))
 }
 
 private fun contactSupport(context: Context) {
     val intent = Intent(Intent.ACTION_SENDTO).apply {
         data = Uri.parse("mailto:${context.getString(R.string.support_email)}")
-        putExtra(Intent.EXTRA_SUBJECT, "PetCare Support Request")
+        putExtra(Intent.EXTRA_SUBJECT, context.getString(R.string.shell_support_subject))
     }
-    try {
-        context.startActivity(intent)
-    } catch (_: ActivityNotFoundException) {
+    if (runCatching { context.startActivity(intent) }.isFailure) {
         Toast.makeText(context, context.getString(R.string.no_email_app), Toast.LENGTH_SHORT).show()
     }
 }
 
 private fun openUrl(context: Context, url: String) {
-    try {
-        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-    } catch (_: ActivityNotFoundException) {
-        Toast.makeText(context, url, Toast.LENGTH_SHORT).show()
+    startIntentSafely(context, Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+}
+
+/** Starts [intent]; if no app can handle it, shows a localized message instead of crashing. */
+private fun startIntentSafely(context: Context, intent: Intent) {
+    if (runCatching { context.startActivity(intent) }.isFailure) {
+        Toast.makeText(context, R.string.shell_no_app_for_link, Toast.LENGTH_SHORT).show()
     }
 }

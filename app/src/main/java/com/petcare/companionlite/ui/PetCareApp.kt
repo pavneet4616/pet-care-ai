@@ -5,38 +5,41 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
-import com.petcare.companionlite.R
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.background
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocalHospital
-import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SmartToy
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -45,19 +48,18 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -66,22 +68,31 @@ import androidx.navigation.navArgument
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.petcare.companionlite.PetCareApplication
+import com.petcare.companionlite.R
 import com.petcare.companionlite.monetization.BillingManager
-import com.petcare.companionlite.ui.dashboard.DashboardScreen
-import com.petcare.companionlite.ui.dashboard.DashboardViewModel
 import com.petcare.companionlite.ui.ai.AiChatScreen
 import com.petcare.companionlite.ui.ai.AiChatViewModel
-import com.petcare.companionlite.ui.onboarding.OnboardingScreen
+import com.petcare.companionlite.ui.dashboard.DashboardScreen
+import com.petcare.companionlite.ui.dashboard.DashboardViewModel
 import com.petcare.companionlite.ui.emergency.EmergencyScreen
+import com.petcare.companionlite.ui.onboarding.OnboardingScreen
 import com.petcare.companionlite.ui.pet.AddPetScreen
 import com.petcare.companionlite.ui.pet.PetDetailScreen
 import com.petcare.companionlite.ui.report.WeeklyReportScreen
 import com.petcare.companionlite.ui.stats.StatsScreen
-import com.petcare.companionlite.ui.theme.Blush
-import com.petcare.companionlite.ui.theme.Cream
-import com.petcare.companionlite.ui.theme.Mist
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+/** Screens reachable from the bottom navigation bar. */
+private val BottomTabRoutes: Set<String> = setOf(
+    AppDestination.Dashboard.route,
+    AppDestination.CareTools.route,
+    AppDestination.Emergency.route,
+    AppDestination.Settings.route,
+)
+
+/** Duration of the quick fade used when switching between bottom tabs. */
+private const val TAB_FADE_MILLIS = 200
 
 @Composable
 fun PetCareApp(
@@ -101,12 +112,25 @@ fun PetCareApp(
     val currentRoute = backStackEntry?.destination?.route
     val activity = context.findActivity()
     val scope = rememberCoroutineScope()
+
+    // The tab the visible screen belongs to. Sub-screens (e.g. pet detail) keep the tab they were opened from.
+    var lastTabRoute by rememberSaveable { mutableStateOf(AppDestination.Dashboard.route) }
+    val selectedTabRoute = currentRoute?.takeIf { it in BottomTabRoutes } ?: lastTabRoute
+    LaunchedEffect(selectedTabRoute) { lastTabRoute = selectedTabRoute }
+
+    val onOnboarding = currentRoute == AppDestination.Onboarding.route
+    val onAiChat = currentRoute?.startsWith("ai-chat") == true
+    // No bottom navigation during onboarding or in the focused chat screen.
+    val showBottomBar = !onOnboarding && !onAiChat
+    val hideAiFab = currentRoute == null || onAiChat || onOnboarding ||
+        currentRoute == AppDestination.Settings.route || currentRoute == AppDestination.Emergency.route
+
     val launchAiPurchase: (Boolean) -> Unit = { weekly ->
         val hostActivity = activity
         if (hostActivity == null) {
             scope.launch {
                 snackbarHostState.showSnackbar(
-                    context.getString(com.petcare.companionlite.R.string.billing_no_activity),
+                    context.getString(R.string.billing_no_activity),
                 )
             }
         } else {
@@ -123,6 +147,11 @@ fun PetCareApp(
     var notificationRequestSignal by remember { mutableIntStateOf(0) }
     var notificationsEnabled by remember { mutableStateOf(context.notificationsEnabled()) }
     val selectedPet = dashboardState.pets.firstOrNull { it.pet.id == dashboardState.settings.selectedPetId } ?: dashboardState.pets.firstOrNull()
+
+    // Localized price from Play, or empty until the product details are loaded (the paywall shows a loading label).
+    fun priceFor(productId: String): String =
+        dashboardState.billing.products.firstOrNull { it.id == productId }?.priceText.orEmpty()
+
     LaunchedEffect(activity) {
         app.container.reviewPrompter.positiveMoments.collect { activity?.let { app.container.reviewPrompter.request(it) } }
     }
@@ -223,13 +252,11 @@ fun PetCareApp(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background,
         floatingActionButton = {
-            val hideFab = currentRoute == null ||
-                currentRoute.startsWith("ai-chat") ||
-                currentRoute == AppDestination.Settings.route ||
-                currentRoute == AppDestination.Onboarding.route ||
-                currentRoute == AppDestination.Emergency.route
-            val showAiFab = dashboardState.pets.isNotEmpty() && !hideFab
-            if (showAiFab) {
+            AnimatedVisibility(
+                visible = dashboardState.pets.isNotEmpty() && !hideAiFab,
+                enter = scaleIn() + fadeIn(),
+                exit = scaleOut() + fadeOut(),
+            ) {
                 FloatingActionButton(
                     onClick = {
                         val petId = selectedPet?.pet?.id ?: return@FloatingActionButton
@@ -239,55 +266,57 @@ fun PetCareApp(
                     },
                     shape = CircleShape,
                 ) {
-                    Icon(Icons.Filled.SmartToy, contentDescription = androidx.compose.ui.res.stringResource(com.petcare.companionlite.R.string.ask_ai_fab))
+                    Icon(Icons.Filled.SmartToy, contentDescription = stringResource(R.string.ask_ai_fab))
                 }
             }
         },
         bottomBar = {
-            // Focused chat screen: no bottom navigation (more space, no accidental taps).
-            if (currentRoute?.startsWith("ai-chat") != true) {
-            NavigationBar {
-                val items = listOf(
-                    AppDestination.Dashboard to Icons.Filled.Home,
-                    AppDestination.CareTools to Icons.Filled.Handyman,
-                    AppDestination.Emergency to Icons.Filled.LocalHospital,
-                    AppDestination.Settings to Icons.Filled.Settings,
-                )
-                items.forEach { (destination, icon) ->
-                    val selected = backStackEntry?.destination?.hierarchy?.any { it.route == destination.route } == true
-                    NavigationBarItem(
-                        selected = selected,
-                        onClick = {
-                            val route = when (destination) {
-                                is AppDestination.CareTools -> {
-                                    val petId = selectedPet?.pet?.id
-                                    if (petId != null) AppDestination.CareTools.createRoute(petId)
-                                    else AppDestination.Dashboard.route
-                                }
-                                else -> destination.route
-                            }
-                            navController.navigate(route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = destination != AppDestination.CareTools
-                            }
-                        },
-                        icon = { Icon(icon, contentDescription = null) },
-                        label = {
-                            val labelRes = when (destination) {
-                                AppDestination.Dashboard -> com.petcare.companionlite.R.string.nav_dashboard
-                                AppDestination.CareTools -> com.petcare.companionlite.R.string.nav_tools
-                                AppDestination.Emergency -> com.petcare.companionlite.R.string.nav_emergency
-                                AppDestination.Settings -> com.petcare.companionlite.R.string.nav_settings
-                                else -> null
-                            }
-                            Text(if (labelRes != null) androidx.compose.ui.res.stringResource(labelRes) else destination.label)
-                        },
+            AnimatedVisibility(
+                visible = showBottomBar,
+                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+            ) {
+                NavigationBar {
+                    val items = listOf(
+                        Triple(AppDestination.Dashboard, Icons.Filled.Home, R.string.nav_dashboard),
+                        Triple(AppDestination.CareTools, Icons.Filled.Handyman, R.string.nav_tools),
+                        Triple(AppDestination.Emergency, Icons.Filled.LocalHospital, R.string.nav_emergency),
+                        Triple(AppDestination.Settings, Icons.Filled.Settings, R.string.nav_settings),
                     )
+                    items.forEach { (destination, icon, labelRes) ->
+                        val tabRoute = destination.route
+                        NavigationBarItem(
+                            selected = selectedTabRoute == tabRoute,
+                            onClick = {
+                                when {
+                                    // Re-tapping the tab on its own root screen does nothing.
+                                    currentRoute == tabRoute -> Unit
+                                    // Re-tapping the active tab from a sub-screen pops back to its root.
+                                    selectedTabRoute == tabRoute &&
+                                        navController.popBackStack(tabRoute, inclusive = false) -> Unit
+                                    else -> {
+                                        val route = when (destination) {
+                                            is AppDestination.CareTools -> selectedPet?.pet?.id
+                                                ?.let { AppDestination.CareTools.createRoute(it) }
+                                                ?: AppDestination.Dashboard.route
+                                            else -> destination.route
+                                        }
+                                        lastTabRoute = tabRoute
+                                        navController.navigate(route) {
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = destination != AppDestination.CareTools
+                                        }
+                                    }
+                                }
+                            },
+                            icon = { Icon(icon, contentDescription = null) },
+                            label = { Text(stringResource(labelRes)) },
+                        )
+                    }
                 }
-            }
             }
         },
     ) { innerPadding ->
@@ -299,10 +328,35 @@ fun PetCareApp(
             NavHost(
                 navController = navController,
                 startDestination = AppDestination.Dashboard.route,
-                enterTransition = { slideInHorizontally(initialOffsetX = { it / 4 }) + fadeIn() },
-                exitTransition = { slideOutHorizontally(targetOffsetX = { -it / 4 }) + fadeOut() },
-                popEnterTransition = { slideInHorizontally(initialOffsetX = { -it / 4 }) + fadeIn() },
-                popExitTransition = { slideOutHorizontally(targetOffsetX = { it / 4 }) + fadeOut() },
+                // Tab-to-tab switches fade quickly; everything else slides as before.
+                enterTransition = {
+                    if (initialState.isBottomTab() && targetState.isBottomTab()) {
+                        fadeIn(animationSpec = tween(TAB_FADE_MILLIS))
+                    } else {
+                        slideInHorizontally(initialOffsetX = { it / 4 }) + fadeIn()
+                    }
+                },
+                exitTransition = {
+                    if (initialState.isBottomTab() && targetState.isBottomTab()) {
+                        fadeOut(animationSpec = tween(TAB_FADE_MILLIS))
+                    } else {
+                        slideOutHorizontally(targetOffsetX = { -it / 4 }) + fadeOut()
+                    }
+                },
+                popEnterTransition = {
+                    if (initialState.isBottomTab() && targetState.isBottomTab()) {
+                        fadeIn(animationSpec = tween(TAB_FADE_MILLIS))
+                    } else {
+                        slideInHorizontally(initialOffsetX = { -it / 4 }) + fadeIn()
+                    }
+                },
+                popExitTransition = {
+                    if (initialState.isBottomTab() && targetState.isBottomTab()) {
+                        fadeOut(animationSpec = tween(TAB_FADE_MILLIS))
+                    } else {
+                        slideOutHorizontally(targetOffsetX = { it / 4 }) + fadeOut()
+                    }
+                },
             ) {
                 composable(AppDestination.Onboarding.route) {
                     OnboardingScreen(
@@ -323,7 +377,15 @@ fun PetCareApp(
                         onAddPet = { navController.navigate(AppDestination.AddPet.route) },
                         onEnableNotifications = {
                             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-                                notificationsEnabled = true
+                                // Before Android 13 there is no runtime prompt: notifications can only be turned on in system settings.
+                                if (context.notificationsEnabled()) {
+                                    notificationsEnabled = true
+                                } else {
+                                    context.openAppNotificationSettings()
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar(context.getString(R.string.notifications_system_message))
+                                    }
+                                }
                             } else {
                                 val hostActivity = activity
                                 if (
@@ -369,12 +431,8 @@ fun PetCareApp(
                                 launchSingleTop = true
                             }
                         },
-                        weeklyPriceText = dashboardState.billing.products
-                            .firstOrNull { it.id == BillingManager.aiWeeklyProductId }
-                            ?.priceText ?: "$2.99",
-                        monthlyPriceText = dashboardState.billing.products
-                            .firstOrNull { it.id == BillingManager.aiMonthlyProductId }
-                            ?.priceText ?: "$9.99",
+                        weeklyPriceText = priceFor(BillingManager.aiWeeklyProductId),
+                        monthlyPriceText = priceFor(BillingManager.aiMonthlyProductId),
                         weeklyReady = dashboardState.billing.weeklyReady,
                         monthlyReady = dashboardState.billing.monthlyReady,
                         billingLoading = dashboardState.billing.isLoading,
@@ -460,13 +518,8 @@ fun PetCareApp(
                     )
                 }
                 composable(AppDestination.Settings.route) {
-                    val weeklyPrice = dashboardState.billing.products
-                        .firstOrNull { it.id == BillingManager.aiWeeklyProductId }
-                        ?.priceText ?: "$2.99"
-                    val monthlyPrice = dashboardState.billing.products
-                        .firstOrNull { it.id == BillingManager.aiMonthlyProductId }
-                        ?.priceText ?: "$9.99"
-                    val petName = selectedPet?.pet?.name ?: "your pet"
+                    val petName = selectedPet?.pet?.name?.takeIf { it.isNotBlank() }
+                        ?: context.getString(R.string.ui_5ec089c9b1)
                     com.petcare.companionlite.ui.dashboard.SettingsScreen(
                         onBack = { navController.popBackStack() },
                         onManagePets = {
@@ -481,8 +534,8 @@ fun PetCareApp(
                                 launchSingleTop = true
                             }
                         },
-                        weeklyPriceText = weeklyPrice,
-                        monthlyPriceText = monthlyPrice,
+                        weeklyPriceText = priceFor(BillingManager.aiWeeklyProductId),
+                        monthlyPriceText = priceFor(BillingManager.aiMonthlyProductId),
                         petName = petName,
                         weeklyReady = dashboardState.billing.weeklyReady,
                         monthlyReady = dashboardState.billing.monthlyReady,
@@ -516,7 +569,8 @@ fun PetCareApp(
                     val petId = entry.arguments?.getString("petId")?.toLongOrNull() ?: return@composable
                     val prefill = entry.arguments?.getString("prefill").orEmpty()
                     val petName = dashboardState.pets.firstOrNull { it.pet.id == petId }?.pet?.name
-                        ?: "your pet"
+                        ?.takeIf { it.isNotBlank() }
+                        ?: context.getString(R.string.ui_5ec089c9b1)
                     val aiVm: AiChatViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
                         key = "ai-$petId",
                         factory = object : androidx.lifecycle.ViewModelProvider.Factory {
@@ -526,19 +580,13 @@ fun PetCareApp(
                             }
                         },
                     )
-                    val weeklyPrice = dashboardState.billing.products
-                        .firstOrNull { it.id == BillingManager.aiWeeklyProductId }
-                        ?.priceText ?: "$2.99"
-                    val monthlyPrice = dashboardState.billing.products
-                        .firstOrNull { it.id == BillingManager.aiMonthlyProductId }
-                        ?.priceText ?: "$9.99"
                     AiChatScreen(
                         petId = petId,
                         petName = petName,
                         prefill = prefill,
                         vm = aiVm,
-                        weeklyPriceText = weeklyPrice,
-                        monthlyPriceText = monthlyPrice,
+                        weeklyPriceText = priceFor(BillingManager.aiWeeklyProductId),
+                        monthlyPriceText = priceFor(BillingManager.aiMonthlyProductId),
                         weeklyReady = dashboardState.billing.weeklyReady,
                         monthlyReady = dashboardState.billing.monthlyReady,
                         billingLoading = dashboardState.billing.isLoading,
@@ -552,11 +600,13 @@ fun PetCareApp(
                             val hostActivity = activity
                             if (hostActivity != null && app.container.adsManager.isRewardedReady()) {
                                 scope.launch {
-                                    val installation=app.container.settingsStore.getOrCreateInstallationId()
-                                    app.container.adsManager.showRewarded(hostActivity,installation) { aiVm.retryWithBonus() }
+                                    val installation = app.container.settingsStore.getOrCreateInstallationId()
+                                    app.container.adsManager.showRewarded(hostActivity, installation) { aiVm.retryWithBonus() }
                                 }
                             } else {
-                                                        scope.launch {
+                                // Not ready yet: make sure a load is running, then tell the user to try again.
+                                app.container.adsManager.loadRewarded(context)
+                                scope.launch {
                                     snackbarHostState.showSnackbar(context.getString(R.string.reward_loading))
                                 }
                             }
@@ -591,10 +641,18 @@ private fun NotificationPermissionEffect(
     if (showExplanation) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { showExplanation = false; onPromptHandled() },
-            title = { Text(androidx.compose.ui.res.stringResource(com.petcare.companionlite.R.string.notifications)) },
-            text = { Text(androidx.compose.ui.res.stringResource(com.petcare.companionlite.R.string.notification_permission_reason)) },
-            confirmButton = { androidx.compose.material3.TextButton(onClick = { showExplanation = false; launcher.launch(Manifest.permission.POST_NOTIFICATIONS) }) { Text(androidx.compose.ui.res.stringResource(com.petcare.companionlite.R.string.enable_notifications)) } },
-            dismissButton = { androidx.compose.material3.TextButton(onClick = { showExplanation = false; onPromptHandled() }) { Text(androidx.compose.ui.res.stringResource(com.petcare.companionlite.R.string.not_now)) } },
+            title = { Text(stringResource(R.string.notifications)) },
+            text = { Text(stringResource(R.string.notification_permission_reason)) },
+            confirmButton = {
+                TextButton(onClick = { showExplanation = false; launcher.launch(Manifest.permission.POST_NOTIFICATIONS) }) {
+                    Text(stringResource(R.string.enable_notifications))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExplanation = false; onPromptHandled() }) {
+                    Text(stringResource(R.string.not_now))
+                }
+            },
         )
     }
 
@@ -633,16 +691,17 @@ sealed class AppDestination(val route: String, val label: String) {
     }
 }
 
+private fun NavBackStackEntry.isBottomTab(): Boolean = destination.route?.let { it in BottomTabRoutes } == true
+
 private fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()
     else -> null
 }
 
-private fun Context.notificationsEnabled(): Boolean {
-    return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-        ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-}
+/** Whether the app may post notifications right now (permission on 33+, app-level toggle on every API). */
+private fun Context.notificationsEnabled(): Boolean =
+    NotificationManagerCompat.from(this).areNotificationsEnabled()
 
 private fun Context.openAppNotificationSettings() {
     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {

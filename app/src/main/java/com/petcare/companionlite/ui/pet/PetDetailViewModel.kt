@@ -3,6 +3,8 @@ package com.petcare.companionlite.ui.pet
 import com.petcare.companionlite.R
 
 import android.app.Application
+import android.content.Context
+import android.text.format.DateFormat as AndroidDateFormat
 import com.petcare.companionlite.core.inAppLanguage
 import com.petcare.companionlite.core.labelResource
 import androidx.lifecycle.AndroidViewModel
@@ -21,6 +23,7 @@ import com.petcare.companionlite.data.model.TaskType
 import com.petcare.companionlite.data.model.TimelineItem
 import com.petcare.companionlite.data.model.TimelineStatus
 import com.petcare.companionlite.data.model.countDailyCareStreak
+import com.petcare.companionlite.data.model.nextTriggerAt
 import com.petcare.companionlite.data.repository.PetRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +31,11 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.util.Calendar
+import java.util.Date
 
 data class PetDetailUiState(
     val pet: PetProfile? = null,
@@ -38,6 +46,8 @@ data class PetDetailUiState(
     val mood: MoodState = MoodState.NEUTRAL,
     val settings: SettingsState = SettingsState(),
     val personalityMessage: String = "",
+    /** Next trigger time (epoch millis) per reminder id, so routines not due today still show a time. */
+    val nextRunAt: Map<Long, Long> = emptyMap(),
 )
 
 class PetDetailViewModel(
@@ -72,6 +82,8 @@ class PetDetailViewModel(
             else -> MoodState.NEUTRAL
         }
         val personalityMsg = app.inAppLanguage().getString(com.petcare.companionlite.R.string.care_record_message, pet?.name.orEmpty())
+        val now = System.currentTimeMillis()
+        val nextRunAt = reminders.mapNotNull { reminder -> nextTriggerAt(reminder, now)?.let { reminder.id to it } }.toMap()
         PetDetailUiState(
             pet = pet,
             reminders = reminders,
@@ -81,6 +93,7 @@ class PetDetailViewModel(
             mood = mood,
             settings = repository.settings.first(),
             personalityMessage = personalityMsg,
+            nextRunAt = nextRunAt,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), PetDetailUiState())
 
@@ -163,4 +176,35 @@ class PetDetailViewModel(
             }
         }
     }
+}
+
+/**
+ * Locale- and 12/24-hour-aware time and date text for the pet screens. Uses the device
+ * clock preference (android.text.format.DateFormat) instead of hard-coded patterns.
+ */
+internal object PetTimeText {
+    fun time(context: Context, millis: Long): String =
+        AndroidDateFormat.getTimeFormat(context).format(Date(millis))
+
+    fun clock(context: Context, hour: Int, minute: Int): String {
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, hour)
+            set(Calendar.MINUTE, minute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        return time(context, calendar.timeInMillis)
+    }
+
+    fun date(context: Context, millis: Long): String =
+        AndroidDateFormat.getMediumDateFormat(context).format(Date(millis))
+
+    fun stamp(context: Context, millis: Long): String = date(context, millis) + ", " + time(context, millis)
+
+    fun weekday(context: Context, millis: Long): String {
+        val locale = context.resources.configuration.locales.get(0)
+        return java.text.SimpleDateFormat("EEEE", locale).format(Date(millis))
+    }
+
+    fun dayOf(millis: Long): LocalDate = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate()
 }

@@ -3,6 +3,7 @@ package com.petcare.companionlite.notifications
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import com.petcare.companionlite.PetCareApplication
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,7 +25,11 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
                     val pet = container.repository.getPet(reminder.petId) ?: return@launch
                     container.notificationScheduler.scheduleReminder(reminder, pet.name)
                 }
-            } finally { pending.finish() }
+            } catch (e: Exception) {
+                Log.e("ReminderAlarmReceiver", "Reminder alarm failed", e)
+            } finally {
+                pending.finish()
+            }
         }
     }
 }

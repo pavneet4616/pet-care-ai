@@ -11,6 +11,8 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import com.petcare.companionlite.core.CareFormats
 
 enum class PetType(val label: String, val emoji: String) {
     DOG("Dog", "🐕"),
@@ -239,7 +241,8 @@ data class Reminder(
     val repeatDays: Set<Int>,
     val createdAt: Long = 0,
 ) {
-    fun timeLabel(): String = LocalTime.of(hour, minute).format(DateTimeFormatter.ofPattern("hh:mm a"))
+    fun timeLabel(): String = LocalTime.of(hour, minute)
+        .format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(CareFormats.appLocale()))
 }
 
 data class HealthLog(
@@ -300,6 +303,8 @@ data class PetDashboardItem(
     val greetingLine: String = "",
     val emotionalTaskPrompt: String = "",
     val hasWaterToday: Boolean = false,
+    /** Number of routines (reminders) set for this pet, regardless of whether any is due today. */
+    val reminderCount: Int = 0,
 )
 
 enum class EngagementTier { HIGH, MEDIUM, LOW }
@@ -373,9 +378,9 @@ data class SettingsState(
     val hasFullAccess: Boolean
         get() = isPremium || aiProActive
 
-    /** No ads while Pro is active (paywall promise). */
+    /** No ads for lifetime Premium or AI Pro (the paywall promises "no ads"). */
     val hasNoAds: Boolean
-        get() = adsRemoved || aiProActive
+        get() = adsRemoved || hasFullAccess
 }
 
 data class LogActivityResult(
@@ -504,15 +509,13 @@ fun todayAt(hour: Int, minute: Int, zoneId: ZoneId = ZoneId.systemDefault()): Lo
 
 fun Long.toDateTimeLabel(): String = Instant.ofEpochMilli(this)
     .atZone(ZoneId.systemDefault())
-    .format(DateTimeFormatter.ofPattern("dd MMM, hh:mm a"))
+    .format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT).withLocale(CareFormats.appLocale()))
 
-fun Long.toTimeLabel(): String = Instant.ofEpochMilli(this)
-    .atZone(ZoneId.systemDefault())
-    .format(DateTimeFormatter.ofPattern("hh:mm a"))
+fun Long.toTimeLabel(): String = CareFormats.clockText(this)
 
 fun Long.toDateLabel(): String = Instant.ofEpochMilli(this)
     .atZone(ZoneId.systemDefault())
-    .format(DateTimeFormatter.ofPattern("dd MMM yyyy"))
+    .format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(CareFormats.appLocale()))
 
 fun Long.toLocalDate(zoneId: ZoneId = ZoneId.systemDefault()): LocalDate =
     Instant.ofEpochMilli(this).atZone(zoneId).toLocalDate()

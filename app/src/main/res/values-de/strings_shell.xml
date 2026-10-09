@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shell_support_subject">Pet Care AI Support-Anfrage</string>
+    <string name="shell_no_app_for_link">Für diesen Link ist keine App verfügbar.</string>
+    <string name="shell_report_generated">Erstellt am %1$s</string>
+    <plurals name="shell_report_streak_days">
+        <item quantity="one">Pflegeserie: %1$d Tag</item>
+        <item quantity="other">Pflegeserie: %1$d Tage</item>
+    </plurals>
+    <plurals name="shell_report_tasks_completed">
+        <item quantity="one">%1$d Aufgabe erledigt</item>
+        <item quantity="other">%1$d Aufgaben erledigt</item>
+    </plurals>
+    <plurals name="shell_report_active_days">
+        <item quantity="one">%1$d Tag mit Pflegeeinträgen</item>
+        <item quantity="other">%1$d Tage mit Pflegeeinträgen</item>
+    </plurals>
+    <string name="shell_col_date">Datum</string>
+    <string name="shell_col_weight">Gewicht</string>
+    <string name="shell_col_when">Wann</string>
+    <string name="shell_col_activity">Aktivität</string>
+</resources>

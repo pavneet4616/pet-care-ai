@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shell_support_subject">Pet Care AI サポートへのお問い合わせ</string>
+    <string name="shell_no_app_for_link">このリンクを開けるアプリがありません。</string>
+    <string name="shell_report_generated">%1$s に作成</string>
+    <plurals name="shell_report_streak_days">
+        <item quantity="other">ケアの連続記録：%1$d日</item>
+    </plurals>
+    <plurals name="shell_report_tasks_completed">
+        <item quantity="other">%1$d件のタスクを完了</item>
+    </plurals>
+    <plurals name="shell_report_active_days">
+        <item quantity="other">ケアを記録した日：%1$d日</item>
+    </plurals>
+    <string name="shell_col_date">日付</string>
+    <string name="shell_col_weight">体重</string>
+    <string name="shell_col_when">日時</string>
+    <string name="shell_col_activity">アクティビティ</string>
+</resources>

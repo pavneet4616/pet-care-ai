@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notif_channel_medication">Medicine reminders</string>
+    <string name="notif_channel_medication_body">Medicine doses with sound and vibration, so they are not missed</string>
+    <string name="notif_title_medicine">💊 Time for %1$s’s medicine</string>
+    <string name="notif_title_feed">🥣 Time for %1$s’s meal</string>
+    <string name="notif_title_walk">🦮 Time for %1$s’s walk</string>
+    <string name="notif_title_grooming">🛁 Time for %1$s’s grooming</string>
+    <string name="notif_body_reminder">Tap to open the care log.</string>
+    <string name="notif_pet_fallback">your pet</string>
+</resources>

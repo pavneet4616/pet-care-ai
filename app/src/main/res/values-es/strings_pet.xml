@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pet_action_feed">Alimentar</string>
+    <string name="pet_action_walk">Paseo</string>
+    <string name="pet_action_medicine">Medicina</string>
+    <string name="pet_action_grooming">Aseo</string>
+    <string name="pet_export_care_report">Exportar informe de cuidados</string>
+    <string name="pet_add_photo">Añadir foto</string>
+    <string name="pet_fallback_title">Mascota</string>
+    <string name="pet_fallback_subject_lower">tu mascota</string>
+    <string name="pet_routine_title_generic">Rutina diaria</string>
+    <string name="pet_repeat_daily">Diario</string>
+    <string name="pet_repeat_weekdays">Entre semana</string>
+    <string name="pet_repeat_weekends">Fines de semana</string>
+    <string name="pet_routine_empty_title">Aún no hay rutinas</string>
+    <string name="pet_routine_empty_body">Añade un recordatorio de comida, paseo, medicina o aseo y %1$s tendrá una rutina diaria feliz 🐾</string>
+    <string name="pet_routine_add">Añadir recordatorio</string>
+    <string name="pet_routine_done">Marcar hecho</string>
+    <string name="pet_routine_next_today">Próximo hoy a las %1$s</string>
+    <string name="pet_routine_next_tomorrow">Próximo mañana a las %1$s</string>
+    <string name="pet_routine_next_later">Próximo %1$s a las %2$s</string>
+    <string name="pet_status_completed">Completado a las %1$s</string>
+    <string name="pet_status_pending">Previsto a las %1$s</string>
+    <string name="pet_status_overdue">Atrasado, era a las %1$s</string>
+    <string name="pet_status_missed">Perdido, era a las %1$s</string>
+    <string name="pet_chart_empty_title">Aún no hay pesajes</string>
+    <string name="pet_chart_empty_body">Registra un peso desde el perfil de la mascota y la línea de tendencia aparecerá aquí.</string>
+    <string name="pet_todo_added">✅ ¡Tarea añadida!</string>
+    <string name="pet_note_saved">📝 ¡Nota guardada!</string>
+</resources>

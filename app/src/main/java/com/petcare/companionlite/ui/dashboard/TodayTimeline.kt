@@ -1,9 +1,5 @@
 package com.petcare.companionlite.ui.dashboard
 
-import com.petcare.companionlite.R
-
-import androidx.compose.ui.res.stringResource
-
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -33,22 +29,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import com.petcare.companionlite.R
 import com.petcare.companionlite.data.model.TaskType
 import com.petcare.companionlite.data.model.TimelineItem
 import com.petcare.companionlite.data.model.TimelineStatus
-import com.petcare.companionlite.data.model.toTimeLabel
+import com.petcare.companionlite.core.CareFormats
+import com.petcare.companionlite.ui.components.taskActionLabel
 import com.petcare.companionlite.ui.theme.Coral
-import com.petcare.companionlite.ui.theme.DeepSage
 import com.petcare.companionlite.ui.theme.Sage
+import androidx.compose.ui.platform.LocalContext
 
 /**
- * Today's task timeline — the addictive checklist.
- *
- * Shows tasks chronologically with ✅/⬜ status.
- * Pending/overdue items are tappable to log them directly.
+ * Today's task timeline: the checklist for the day.
+ * Pending, overdue or missed items are tappable, so they can be logged directly.
  */
 @Composable
 fun TodayTimelineSection(
@@ -80,32 +77,28 @@ fun TodayTimelineSection(
                 TimelineRow(
                     item = item,
                     onTap = {
-                        if (item.status == TimelineStatus.PENDING || 
-                            item.status == TimelineStatus.OVERDUE || 
-                            item.status == TimelineStatus.MISSED) {
+                        if (item.status == TimelineStatus.PENDING ||
+                            item.status == TimelineStatus.OVERDUE ||
+                            item.status == TimelineStatus.MISSED
+                        ) {
                             onLogTask(item.reminder.type)
                         }
-                    }
+                    },
                 )
             }
 
             // Completion summary
             val done = timeline.count { it.status == TimelineStatus.COMPLETED }
             val total = timeline.size
-            if (total > 0) {
-                Spacer(Modifier.height(8.dp))
-                val progressText = if (done == total) {
-                    "✨ $petName's perfect day!"
-                } else {
-                    "$done of $total done — keep going! 💚"
-                }
-                Text(
-                    progressText,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (done == total) Sage else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                )
-            }
+            val allDone = done == total
+            Spacer(Modifier.height(8.dp))
+            Text(
+                if (allDone) stringResource(R.string.dash_timeline_perfect, petName)
+                else stringResource(R.string.dash_timeline_progress, done, total),
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold,
+                color = if (allDone) Sage else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            )
         }
     }
 }
@@ -164,10 +157,10 @@ private fun TimelineRow(
 
         Spacer(Modifier.width(14.dp))
 
-        // Task label
+        // Task label: short, capitalized action label
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                stringResource(R.string.ui_78c505fe4e, taskEmoji, com.petcare.companionlite.ui.components.taskLabel(item.reminder.type)),
+                stringResource(R.string.ui_78c505fe4e, taskEmoji, taskActionLabel(item.reminder.type)),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = if (isCompleted) FontWeight.Normal else FontWeight.SemiBold,
                 color = if (isCompleted)
@@ -178,10 +171,11 @@ private fun TimelineRow(
             )
         }
 
-        // Time
+        // Time, in the device's clock format (12h or 24h) and language
+        val context = LocalContext.current
         val timeText = when {
-            isCompleted && item.matchedActivity != null -> item.matchedActivity.timestamp.toTimeLabel()
-            else -> item.scheduledAt.toTimeLabel()
+            isCompleted && item.matchedActivity != null -> CareFormats.clockText(context, item.matchedActivity.timestamp)
+            else -> CareFormats.clockText(context, item.scheduledAt)
         }
         Text(
             timeText,

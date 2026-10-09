@@ -55,6 +55,15 @@ data class AiAnswerSection(
     val items: List<String> = emptyList(),
 )
 
+/**
+ * Internal sentinel used when the Worker sends no disclaimer. It is never shown as-is:
+ * the UI replaces it with the localized disclaimer (see [AiAnswer.disclaimerOr]).
+ */
+const val AI_DISCLAIMER_SENTINEL = "AI guidance only. A veterinarian should diagnose medical problems."
+
+/** Composer limit. Requests are trimmed to the same length, so nothing typed past it is ever sent. */
+const val AI_MAX_INPUT_CHARS = 2000
+
 data class AiAnswer(
     val language: String = "en",
     val title: String = "",
@@ -63,8 +72,12 @@ data class AiAnswer(
     val sections: List<AiAnswerSection> = emptyList(),
     val followUps: List<String> = emptyList(),
     val contextNote: String? = null,
-    val disclaimer: String = "AI guidance only. A veterinarian should diagnose medical problems.",
-)
+    val disclaimer: String = AI_DISCLAIMER_SENTINEL,
+) {
+    /** The server's disclaimer, or [localized] when none was provided (or only the English sentinel arrived). */
+    fun disclaimerOr(localized: String): String =
+        disclaimer.takeIf { it.isNotBlank() && it != AI_DISCLAIMER_SENTINEL } ?: localized
+}
 
 /** Defensive sanitizer for any model-produced display string. */
 fun cleanAiText(value: String?, maxLength: Int): String {
@@ -122,7 +135,7 @@ fun parseAiAnswer(json: String?): AiAnswer? {
             contextNote = cleanAiText(o.optString("contextNote"), 200).takeIf { it.isNotEmpty() },
             disclaimer = cleanAiText(o.optString("disclaimer"), 200)
                 .takeIf { it.isNotEmpty() }
-                ?: "AI guidance only. A veterinarian should diagnose medical problems.",
+                ?: AI_DISCLAIMER_SENTINEL,
         )
     }.getOrNull()
 }

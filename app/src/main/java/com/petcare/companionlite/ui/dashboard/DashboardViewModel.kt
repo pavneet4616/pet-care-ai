@@ -136,7 +136,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             val result = repository.logActivity(petId, taskType)
             if (!result.duplicateDetected) {
                 val pet = uiState.value.pets.firstOrNull { it.pet.id == petId }
-                val petName = pet?.pet?.name ?: "Your pet"
+                val petName = pet?.pet?.name ?: app.inAppLanguage().getString(R.string.dash_pet_fallback_cap)
                 val newStreak = (pet?.streakDays ?: 0)
                 app.container.diagnostics.event("care_logged",taskType.name)
                 if (newStreak >= 7) app.container.reviewPrompter.positiveMoment()
@@ -163,7 +163,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 )
             )
             val pet = uiState.value.pets.firstOrNull { it.pet.id == petId }
-            val petName = pet?.pet?.name ?: "Your pet"
+            val petName = pet?.pet?.name ?: app.inAppLanguage().getString(R.string.dash_pet_fallback_cap)
             _celebrationState.value = CelebrationData(
                 show = true,
                 message = app.inAppLanguage().getString(R.string.ui_70ec4a9dff, petName),

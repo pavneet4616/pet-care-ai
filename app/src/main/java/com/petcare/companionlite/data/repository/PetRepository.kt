@@ -33,7 +33,9 @@ import com.petcare.companionlite.data.model.toEntity
 import com.petcare.companionlite.data.model.toProfile
 import com.petcare.companionlite.notifications.NotificationScheduler
 import com.petcare.companionlite.data.settings.SettingsStore
+import android.util.Log
 import java.time.ZoneId
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -265,9 +267,36 @@ class PetRepository(
             timestamp = nowMillis(), reminderId = reminderId, scheduledAt = scheduledAt))
     }
 
+    /**
+     * Best-effort migration for 1.1.0 pets whose photoUri is a picker content URI. A readable photo is
+     * copied into app storage and the pet is updated; an unreadable one keeps its URI (the UI shows an
+     * emoji fallback). Idempotent and cheap: only content: URIs are touched, and an imported pet no longer matches.
+     */
     suspend fun migratePhotos() {
-        petDao.getAll().filter { it.photoUri?.startsWith("content:") == true }.forEach { pet ->
-            runCatching { photoStore.importPhoto(pet.photoUri) }.getOrNull()?.let { petDao.update(pet.copy(photoUri = it)) }
+        val legacy = try {
+            petDao.getAll().filter { it.photoUri?.startsWith("content:") == true }
+        } catch (e: Exception) {
+            Log.e(TAG, "Photo migration skipped", e)
+            return
+        }
+        legacy.forEach { pet ->
+            val imported = try {
+                photoStore.importPhoto(pet.photoUri)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                null // No grant for this URI any more: leave it as-is.
+            }
+            if (imported == null) return@forEach
+            // Under the save lock, so a concurrent edit is not overwritten by this snapshot.
+            saveMutex.withLock {
+                val current = petDao.getById(pet.id)
+                if (current != null && current.photoUri == pet.photoUri) {
+                    petDao.update(current.copy(photoUri = imported))
+                } else {
+                    photoStore.delete(imported) // Edited or deleted meanwhile: drop the copy.
+                }
+            }
         }
     }
 
@@ -309,6 +338,7 @@ class PetRepository(
 
 
     companion object {
+        private const val TAG = "PetRepository"
         private const val DUPLICATE_TAP_GUARD_MILLIS = 15_000L
         const val FREE_REMINDER_LIMIT = 3
     }

@@ -78,16 +78,25 @@ class PetEditorViewModel(application: Application) : AndroidViewModel(applicatio
         profile = profile.copy(photoUri = value)
     }
 
+    private var saving = false
+
     fun savePet() {
+        // A double tap must not insert the pet twice.
+        if (saving) return
+        saving = true
         viewModelScope.launch {
-            val unit = repository.settings.first().weightUnit
-            val parsed = CareFormats.parseNumber(profile.weightKg)
-            if (profile.weightKg.isNotBlank() && parsed == null) {
-                lastSaveResult = PetSaveResult.InvalidInput
-                return@launch
+            try {
+                val unit = repository.settings.first().weightUnit
+                val parsed = CareFormats.parseNumber(profile.weightKg)
+                if (profile.weightKg.isNotBlank() && parsed == null) {
+                    lastSaveResult = PetSaveResult.InvalidInput
+                    return@launch
+                }
+                val canonical = profile.copy(weightKg = parsed?.let { CareFormats.toKg(it, unit).toString() }.orEmpty())
+                lastSaveResult = runCatching { repository.savePet(canonical) }.getOrDefault(PetSaveResult.InvalidInput)
+            } finally {
+                saving = false
             }
-            val canonical = profile.copy(weightKg = parsed?.let { CareFormats.toKg(it, unit).toString() }.orEmpty())
-            lastSaveResult = runCatching { repository.savePet(canonical) }.getOrDefault(PetSaveResult.InvalidInput)
         }
     }
 

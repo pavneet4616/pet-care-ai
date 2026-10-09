@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pet_action_feed">Füttern</string>
+    <string name="pet_action_walk">Gassi</string>
+    <string name="pet_action_medicine">Medizin</string>
+    <string name="pet_action_grooming">Pflege</string>
+    <string name="pet_export_care_report">Pflegebericht exportieren</string>
+    <string name="pet_add_photo">Foto hinzufügen</string>
+    <string name="pet_fallback_title">Tier</string>
+    <string name="pet_fallback_subject_lower">dein Tier</string>
+    <string name="pet_routine_title_generic">Tägliche Routine</string>
+    <string name="pet_repeat_daily">Täglich</string>
+    <string name="pet_repeat_weekdays">Werktags</string>
+    <string name="pet_repeat_weekends">Wochenende</string>
+    <string name="pet_routine_empty_title">Noch keine Routinen</string>
+    <string name="pet_routine_empty_body">Erinnerung für Füttern, Gassi, Medizin oder Pflege anlegen, dann bekommt %1$s einen schönen Tagesrhythmus 🐾</string>
+    <string name="pet_routine_add">Erinnerung hinzufügen</string>
+    <string name="pet_routine_done">Erledigt</string>
+    <string name="pet_routine_next_today">Heute als Nächstes um %1$s</string>
+    <string name="pet_routine_next_tomorrow">Morgen um %1$s</string>
+    <string name="pet_routine_next_later">Nächstes Mal: %1$s um %2$s</string>
+    <string name="pet_status_completed">Erledigt um %1$s</string>
+    <string name="pet_status_pending">Fällig um %1$s</string>
+    <string name="pet_status_overdue">Überfällig, war fällig um %1$s</string>
+    <string name="pet_status_missed">Verpasst, war fällig um %1$s</string>
+    <string name="pet_chart_empty_title">Noch keine Wiegungen</string>
+    <string name="pet_chart_empty_body">Gewicht im Tierprofil erfassen, dann erscheint hier der Verlauf.</string>
+    <string name="pet_todo_added">✅ Aufgabe hinzugefügt!</string>
+    <string name="pet_note_saved">📝 Notiz gespeichert!</string>
+</resources>

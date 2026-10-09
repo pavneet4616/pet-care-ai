@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pet_action_feed">Voeren</string>
+    <string name="pet_action_walk">Uitlaten</string>
+    <string name="pet_action_medicine">Medicijn</string>
+    <string name="pet_action_grooming">Verzorging</string>
+    <string name="pet_export_care_report">Zorgrapport exporteren</string>
+    <string name="pet_add_photo">Foto toevoegen</string>
+    <string name="pet_fallback_title">Huisdier</string>
+    <string name="pet_fallback_subject_lower">je huisdier</string>
+    <string name="pet_routine_title_generic">Dagelijkse routine</string>
+    <string name="pet_repeat_daily">Dagelijks</string>
+    <string name="pet_repeat_weekdays">Doordeweeks</string>
+    <string name="pet_repeat_weekends">Weekend</string>
+    <string name="pet_routine_empty_title">Nog geen routines</string>
+    <string name="pet_routine_empty_body">Voeg een herinnering toe voor voeren, uitlaten, medicijnen of verzorging en %1$s krijgt een fijn dagelijks ritme 🐾</string>
+    <string name="pet_routine_add">Herinnering toevoegen</string>
+    <string name="pet_routine_done">Markeer als gedaan</string>
+    <string name="pet_routine_next_today">Volgende vandaag om %1$s</string>
+    <string name="pet_routine_next_tomorrow">Volgende morgen om %1$s</string>
+    <string name="pet_routine_next_later">Volgende %1$s om %2$s</string>
+    <string name="pet_status_completed">Voltooid om %1$s</string>
+    <string name="pet_status_pending">Gepland om %1$s</string>
+    <string name="pet_status_overdue">Te laat, gepland om %1$s</string>
+    <string name="pet_status_missed">Gemist, gepland om %1$s</string>
+    <string name="pet_chart_empty_title">Nog geen wegingen</string>
+    <string name="pet_chart_empty_body">Voeg een gewicht toe via het profiel van je huisdier, dan verschijnt de trendlijn hier.</string>
+    <string name="pet_todo_added">✅ Taak toegevoegd!</string>
+    <string name="pet_note_saved">📝 Notitie opgeslagen!</string>
+</resources>

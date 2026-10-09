@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="onb_birth_date_hint">Toca para elegir una fecha</string>
+    <string name="onb_birth_date_not_sure">No estoy seguro</string>
+    <string name="onb_photo_looks_good">¡Qué bonita! 📸</string>
+    <string name="onb_step_progress">Paso %1$d de %2$d</string>
+    <string name="onb_pet_type_hint">Elige el que mejor encaje 🐾</string>
+    <string name="onb_edit_title">Editar a %1$s</string>
+</resources>

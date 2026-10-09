@@ -61,11 +61,21 @@ object ShareHelper {
         val startX = 150f
         val lineSpacing = 80f
 
-        drawFitted(strings.getString(R.string.report_tasks,report.tasksCompleted), startX, y, textPaint)
+        val resources = strings.resources
+        drawFitted(
+            resources.getQuantityString(R.plurals.shell_report_tasks_completed, report.tasksCompleted, report.tasksCompleted),
+            startX, y, textPaint,
+        )
         y += lineSpacing
-        drawFitted(strings.getString(R.string.report_streak,report.bestStreak), startX, y, textPaint)
+        drawFitted(
+            resources.getQuantityString(R.plurals.shell_report_streak_days, report.bestStreak, report.bestStreak),
+            startX, y, textPaint,
+        )
         y += lineSpacing
-        drawFitted(strings.getString(R.string.report_active_days,report.daysActive), startX, y, textPaint)
+        drawFitted(
+            resources.getQuantityString(R.plurals.shell_report_active_days, report.daysActive, report.daysActive),
+            startX, y, textPaint,
+        )
 
         // Branding
         drawFitted(strings.getString(R.string.report_brand), width / 2f, height - 80f, brandPaint)

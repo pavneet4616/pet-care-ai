@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dashboard quick actions: short, capitalized labels -->
+    <string name="dash_action_feed">Feed</string>
+    <string name="dash_action_water">Water</string>
+    <string name="dash_action_walk">Walk</string>
+    <string name="dash_action_medicine">Medicine</string>
+    <string name="dash_action_grooming">Grooming</string>
+    <string name="dash_logged">Logged ✓</string>
+
+    <!-- Day status (hero subtitle and status chip; must always match) -->
+    <string name="dash_status_no_routine">No routine yet — add one</string>
+    <string name="dash_status_nothing_due">Nothing due today 🎉</string>
+    <string name="dash_status_all_done">All done for today 🎉</string>
+    <plurals name="dash_status_to_go">
+        <item quantity="one">%1$d to go</item>
+        <item quantity="other">%1$d to go</item>
+    </plurals>
+    <plurals name="dash_status_overdue">
+        <item quantity="one">%1$d overdue</item>
+        <item quantity="other">%1$d overdue</item>
+    </plurals>
+
+    <!-- Hero title when there is no single task to focus on -->
+    <string name="dash_hero_no_routine">Give %1$s a daily routine</string>
+    <string name="dash_hero_free_day">%1$s has a quiet day</string>
+    <string name="dash_hero_done">%1$s is all set for today ❤️</string>
+
+    <!-- Next task and timeline -->
+    <string name="dash_next_format">Next: %1$s · %2$s</string>
+    <string name="dash_when_today">Today %1$s</string>
+    <string name="dash_when_tomorrow">Tomorrow %1$s</string>
+    <string name="dash_when_weekday">%1$s %2$s</string>
+    <string name="dash_word_upcoming">Upcoming</string>
+    <string name="dash_word_overdue">Overdue</string>
+    <string name="dash_word_missed">Missed</string>
+    <string name="dash_task_title">%1$s: %2$s</string>
+    <string name="dash_timeline_perfect">✨ A perfect day for %1$s!</string>
+    <string name="dash_timeline_progress">%1$d of %2$d done — keep going! 💚</string>
+    <string name="dash_empty_routine_body">Open %1$s’s details to set a daily reminder and start a care streak.</string>
+
+    <!-- Counters -->
+    <string name="dash_done_of_total">%1$d of %2$d done</string>
+    <plurals name="dash_pending_count">
+        <item quantity="one">%1$d pending</item>
+        <item quantity="other">%1$d pending</item>
+    </plurals>
+    <plurals name="dash_streak_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <plurals name="dash_streak_badge">
+        <item quantity="one">🔥 %1$d-day streak</item>
+        <item quantity="other">🔥 %1$d-day streak</item>
+    </plurals>
+
+    <!-- Streak goals -->
+    <string name="dash_goal_habit">3-day habit</string>
+    <string name="dash_goal_streak">7-day streak</string>
+    <string name="dash_goal_champion">30-day champion</string>
+    <string name="dash_goal_legendary">Legendary!</string>
+
+    <!-- Summary row -->
+    <string name="dash_summary_done">Done</string>
+    <string name="dash_summary_pending">Pending</string>
+    <string name="dash_summary_streak">Streak</string>
+
+    <!-- Fallback pet names and accessibility -->
+    <string name="dash_pet_fallback">your pet</string>
+    <string name="dash_pet_fallback_cap">Your pet</string>
+    <string name="dash_cd_dismiss">Dismiss</string>
+</resources>

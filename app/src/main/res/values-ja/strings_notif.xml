@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notif_channel_medication">投薬のリマインダー</string>
+    <string name="notif_channel_medication_body">投薬の時間を音と振動でお知らせして、飲み忘れを防ぎます</string>
+    <string name="notif_title_medicine">💊 %1$sのお薬の時間です</string>
+    <string name="notif_title_feed">🥣 %1$sのごはんの時間です</string>
+    <string name="notif_title_walk">🦮 %1$sとお散歩の時間です</string>
+    <string name="notif_title_grooming">🛁 %1$sのお手入れの時間です</string>
+    <string name="notif_body_reminder">タップしてケアログを開きます。</string>
+    <string name="notif_pet_fallback">うちの子</string>
+</resources>

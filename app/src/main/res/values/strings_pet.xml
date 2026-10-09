@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="pet_action_feed">Feed</string>
+    <string name="pet_action_walk">Walk</string>
+    <string name="pet_action_medicine">Medicine</string>
+    <string name="pet_action_grooming">Grooming</string>
+    <string name="pet_export_care_report">Export care report</string>
+    <string name="pet_add_photo">Add photo</string>
+    <string name="pet_fallback_title">Pet</string>
+    <string name="pet_fallback_subject_lower">your pet</string>
+    <string name="pet_routine_title_generic">Daily routine</string>
+    <string name="pet_repeat_daily">Daily</string>
+    <string name="pet_repeat_weekdays">Weekdays</string>
+    <string name="pet_repeat_weekends">Weekends</string>
+    <string name="pet_routine_empty_title">No routines yet</string>
+    <string name="pet_routine_empty_body">Add a feeding, walk, medicine or grooming reminder and %1$s will get a happy daily rhythm 🐾</string>
+    <string name="pet_routine_add">Add reminder</string>
+    <string name="pet_routine_done">Mark done</string>
+    <string name="pet_routine_next_today">Next today at %1$s</string>
+    <string name="pet_routine_next_tomorrow">Next tomorrow at %1$s</string>
+    <string name="pet_routine_next_later">Next %1$s at %2$s</string>
+    <string name="pet_status_completed">Completed at %1$s</string>
+    <string name="pet_status_pending">Due at %1$s</string>
+    <string name="pet_status_overdue">Overdue, was due at %1$s</string>
+    <string name="pet_status_missed">Missed, was due at %1$s</string>
+    <string name="pet_chart_empty_title">No weigh-ins yet</string>
+    <string name="pet_chart_empty_body">Log a weight from the pet profile and the trend line will show up here.</string>
+    <string name="pet_todo_added">✅ To-do added!</string>
+    <string name="pet_note_saved">📝 Note saved!</string>
+</resources>

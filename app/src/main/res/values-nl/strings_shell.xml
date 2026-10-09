@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="shell_support_subject">Supportverzoek Pet Care AI</string>
+    <string name="shell_no_app_for_link">Geen app kan deze link openen.</string>
+    <string name="shell_report_generated">Gegenereerd op %1$s</string>
+    <plurals name="shell_report_streak_days">
+        <item quantity="one">Zorgreeks: %1$d dag</item>
+        <item quantity="other">Zorgreeks: %1$d dagen</item>
+    </plurals>
+    <plurals name="shell_report_tasks_completed">
+        <item quantity="one">%1$d taak voltooid</item>
+        <item quantity="other">%1$d taken voltooid</item>
+    </plurals>
+    <plurals name="shell_report_active_days">
+        <item quantity="one">%1$d dag met zorgregistraties</item>
+        <item quantity="other">%1$d dagen met zorgregistraties</item>
+    </plurals>
+    <string name="shell_col_date">Datum</string>
+    <string name="shell_col_weight">Gewicht</string>
+    <string name="shell_col_when">Wanneer</string>
+    <string name="shell_col_activity">Activiteit</string>
+</resources>

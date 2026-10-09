@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ai_welcome_title">Wat wil je weten over %1$s?</string>
+    <string name="ai_chips_heading">Veelgestelde vragen</string>
+    <string name="ai_example_dog">Probeer te vragen: “Mijn hond heeft vandaag gebraakt. Moet ik me zorgen maken?”</string>
+    <string name="ai_example_cat">Probeer te vragen: “Mijn kat heeft vandaag gebraakt. Moet ik me zorgen maken?”</string>
+    <string name="ai_example_bird">Probeer te vragen: “Mijn vogel heeft vandaag niet gegeten. Moet ik me zorgen maken?”</string>
+    <string name="ai_example_other">Probeer te vragen: “Mijn huisdier heeft vandaag niet gegeten. Moet ik me zorgen maken?”</string>
+    <string name="ai_input_counter">%1$d / %2$d</string>
+    <string name="ai_share_chooser_title">AI-antwoord delen</string>
+    <string name="ai_disclaimer_default">Alleen AI-advies. Een dierenarts moet medische problemen vaststellen.</string>
+    <string name="ai_urgent_banner">Dit kan dringend zijn. Neem nu contact op met een dierenarts.</string>
+    <string name="ai_price_per_month">%1$s / maand</string>
+    <string name="ai_price_per_week">%1$s / week</string>
+    <string name="ai_best_value">Beste keuze</string>
+    <string name="ai_best_value_save">Beste keuze · bespaar %1$d%%</string>
+</resources>

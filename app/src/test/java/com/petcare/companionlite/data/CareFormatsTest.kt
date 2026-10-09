@@ -20,7 +20,9 @@ class CareFormatsTest {
         assertEquals(10.0, CareFormats.toKg(10.0, "kg"), 0.0)
     }
     @Test fun displaysChosenCurrencyAndWeightUsingLocalNumberFormat() {
-        assertTrue(CareFormats.weight(10.0, "lb", Locale.GERMANY).startsWith("22,05"))
+        // One decimal at most: 12.5 kg = 27.557 lb.
+        assertEquals("27,6 lb", CareFormats.weight(12.5, "lb", Locale.GERMANY))
+        assertEquals("12,5 kg", CareFormats.weight(12.5, "kg", Locale.GERMANY))
         assertTrue(CareFormats.currency(12.5, "EUR", Locale.GERMANY).contains("12,50"))
         assertTrue(CareFormats.currency(12.5, "USD", Locale.US).contains("$12.50"))
     }

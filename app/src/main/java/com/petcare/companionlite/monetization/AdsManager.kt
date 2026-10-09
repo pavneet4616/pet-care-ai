@@ -15,14 +15,17 @@ import com.google.android.ump.ConsentRequestParameters
 import com.google.android.ump.UserMessagingPlatform
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
 
 class AdsManager(context: Context) {
-    private val consent = UserMessagingPlatform.getConsentInformation(context.applicationContext)
+    private val appContext = context.applicationContext
+    private val consent = UserMessagingPlatform.getConsentInformation(appContext)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val initializationStarted = AtomicBoolean(false)
     private var initialized = false
@@ -33,6 +36,8 @@ class AdsManager(context: Context) {
     private var rewardedAd: RewardedAd? = null
     private var isLoadingRewarded = false
     private var consentGeneration = 0
+    private var rewardedRetryStep = 0
+    private var rewardedRetryJob: Job? = null
 
     fun gatherConsent(activity: Activity) {
         consent.requestConsentInfoUpdate(
@@ -56,6 +61,7 @@ class AdsManager(context: Context) {
         consentGeneration++
         rewardedAd = null
         isLoadingRewarded = false
+        cancelRewardedRetry()
         UserMessagingPlatform.showPrivacyOptionsForm(activity) { updateConsent(activity) }
     }
 
@@ -71,6 +77,7 @@ class AdsManager(context: Context) {
             consentGeneration++
             rewardedAd = null
             isLoadingRewarded = false
+            cancelRewardedRetry()
             return
         }
         if (initialized) {
@@ -96,6 +103,9 @@ class AdsManager(context: Context) {
 
     fun loadRewarded(context: Context) {
         if (!_adsAllowed.value || !consent.canRequestAds() || rewardedAd != null || isLoadingRewarded) return
+        // A load requested now (by the user or by a finished retry) supersedes any pending retry.
+        rewardedRetryJob?.cancel()
+        rewardedRetryJob = null
         val generation = consentGeneration
         isLoadingRewarded = true
 
@@ -107,6 +117,7 @@ class AdsManager(context: Context) {
                 override fun onAdLoaded(ad: RewardedAd) {
                     if (generation != consentGeneration || !_adsAllowed.value) return
                     isLoadingRewarded = false
+                    rewardedRetryStep = 0
                     rewardedAd = ad
                 }
 
@@ -114,12 +125,38 @@ class AdsManager(context: Context) {
                     if (generation != consentGeneration) return
                     isLoadingRewarded = false
                     rewardedAd = null
+                    scheduleRewardedRetry()
                 }
             },
         )
     }
 
-    fun isRewardedReady(): Boolean = _adsAllowed.value && consent.canRequestAds() && rewardedAd != null
+    /**
+     * True when a rewarded ad can be shown right now. When none is ready and no load is running,
+     * a load is started so the next attempt has an ad.
+     */
+    fun isRewardedReady(): Boolean {
+        val ready = _adsAllowed.value && consent.canRequestAds() && rewardedAd != null
+        if (!ready) loadRewarded(appContext)
+        return ready
+    }
+
+    private fun scheduleRewardedRetry() {
+        val delayMs = REWARDED_RETRY_DELAYS_MS[rewardedRetryStep.coerceAtMost(REWARDED_RETRY_DELAYS_MS.lastIndex)]
+        rewardedRetryStep++
+        rewardedRetryJob?.cancel()
+        rewardedRetryJob = scope.launch {
+            delay(delayMs)
+            rewardedRetryJob = null
+            loadRewarded(appContext)
+        }
+    }
+
+    private fun cancelRewardedRetry() {
+        rewardedRetryJob?.cancel()
+        rewardedRetryJob = null
+        rewardedRetryStep = 0
+    }
 
     fun showRewarded(activity: Activity, installationId:String, onRewardEarned: () -> Unit) {
         val ad = rewardedAd
@@ -149,6 +186,9 @@ class AdsManager(context: Context) {
     }
 
     companion object {
+        /** Wait between rewarded-ad load retries after a failure: 15 s, then 60 s, then every 5 min. */
+        private val REWARDED_RETRY_DELAYS_MS = longArrayOf(15_000L, 60_000L, 300_000L)
+
         val bannerAdUnitId: String
             get() = BuildConfig.ADMOB_BANNER_ID
     }

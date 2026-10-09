@@ -25,10 +25,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Date
-import java.util.Locale
 
 data class ToolsHubUiState(
     val waterLogs: List<WaterLog> = emptyList(),
@@ -146,7 +143,9 @@ class ToolsHubViewModel(
                     timestamp = System.currentTimeMillis()
                 )
             )
-            _message.value = if (isTodo) "✅ To-do added!" else "📝 Note saved!"
+            _message.value = appContext.inAppLanguage().getString(
+                if (isTodo) R.string.pet_todo_added else R.string.pet_note_saved,
+            )
         }
     }
 
@@ -210,11 +209,5 @@ class ToolsHubViewModel(
 
     companion object {
         private val SICK_MOODS = setOf("😢", "🤒", "😰")
-
-        fun formatTimestamp(timestamp: Long): String {
-            val now = System.currentTimeMillis()
-            val diff = now - timestamp
-            return java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM,java.text.DateFormat.SHORT).format(Date(timestamp))
-        }
     }
 }

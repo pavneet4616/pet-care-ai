@@ -1,173 +1,154 @@
 package com.petcare.companionlite.ui.dashboard
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.NotificationsActive
-import androidx.compose.material.icons.filled.Pets
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.filled.WorkspacePremium
-import androidx.compose.material.icons.filled.Handyman
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.petcare.companionlite.R
-import com.petcare.companionlite.data.model.MoodState
-import com.petcare.companionlite.data.model.PetDashboardItem
-import com.petcare.companionlite.data.model.PetType
 import com.petcare.companionlite.data.model.TaskType
 import com.petcare.companionlite.data.model.TimelineItem
 import com.petcare.companionlite.data.model.TimelineStatus
-import com.petcare.companionlite.monetization.BillingManager
-import com.petcare.companionlite.ui.components.AdBanner
-import com.petcare.companionlite.ui.components.PetAvatar
-import com.petcare.companionlite.ui.components.PetCard
-import com.petcare.companionlite.ui.ai.AiPaywallSheet
+import com.petcare.companionlite.core.CareFormats
+import com.petcare.companionlite.ui.components.bouncyPress
+import com.petcare.companionlite.ui.components.taskActionLabel
 import com.petcare.companionlite.ui.theme.Coral
-import com.petcare.companionlite.ui.theme.DeepSage
-import com.petcare.companionlite.ui.theme.Honey
-import com.petcare.companionlite.ui.theme.PremiumGold
 import com.petcare.companionlite.ui.theme.Sage
-import kotlinx.coroutines.delay
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
+// ── NEXT CARE HERO CARD ──
 @Composable
 fun NextCareHeroCard(
     nextTask: TimelineItem,
     petName: String,
     onMarkDone: () -> Unit,
 ) {
+    val emoji = when (nextTask.reminder.type) {
+        TaskType.FEED -> "🥣"
+        TaskType.WALK -> "🚶"
+        TaskType.MEDICINE -> "💊"
+        TaskType.GROOMING -> "✂️"
+    }
+    val timeLabel = CareFormats.clockText(LocalContext.current, nextTask.scheduledAt)
+    val statusWord = when (nextTask.status) {
+        TimelineStatus.OVERDUE -> stringResource(R.string.dash_word_overdue)
+        TimelineStatus.MISSED -> stringResource(R.string.dash_word_missed)
+        else -> stringResource(R.string.dash_word_upcoming)
+    }
+    val title = stringResource(R.string.dash_task_title, statusWord, taskActionLabel(nextTask.reminder.type))
+    val isLate = nextTask.status != TimelineStatus.PENDING
+    val buttonInteraction = remember { MutableInteractionSource() }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
-        Row(
-            modifier = Modifier.padding(18.dp).fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            val emoji = when (nextTask.reminder.type) {
-                TaskType.FEED -> "🥣"
-                TaskType.WALK -> "🚶"
-                TaskType.MEDICINE -> "💊"
-                TaskType.GROOMING -> "✂️"
-            }
-            val timeLabel = Instant.ofEpochMilli(nextTask.scheduledAt)
-                .atZone(ZoneId.systemDefault())
-                .format(DateTimeFormatter.ofPattern("h:mm a"))
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth().padding(18.dp)) {
+            // Narrow widths (phones, long translations) put the button below the text instead of squeezing it.
+            val stacked = maxWidth < 420.dp
 
-            Row(
-                modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.1f)),
-                    contentAlignment = Alignment.Center
+            val taskInfo: @Composable (Modifier) -> Unit = { infoModifier ->
+                Row(
+                    modifier = infoModifier,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(emoji, style = MaterialTheme.typography.titleLarge)
-                }
-                Column {
-                    val statusPrefix = when (nextTask.status) {
-                        TimelineStatus.OVERDUE -> stringResource(R.string.ui_efb8e2b275)
-                        TimelineStatus.MISSED -> stringResource(R.string.ui_c62b29a9e8)
-                        else -> stringResource(R.string.ui_ec82d657e3)
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(emoji, style = MaterialTheme.typography.titleLarge)
                     }
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            title,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isLate) Coral else MaterialTheme.colorScheme.onSecondaryContainer,
+                        )
+                        Text(
+                            stringResource(R.string.ui_e31ddfb300, petName, timeLabel),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
+                        )
+                    }
+                }
+            }
+
+            val actionButton: @Composable (Modifier) -> Unit = { buttonModifier ->
+                Button(
+                    onClick = onMarkDone,
+                    modifier = buttonModifier.bouncyPress(buttonInteraction),
+                    interactionSource = buttonInteraction,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                ) {
                     Text(
-                        statusPrefix + com.petcare.companionlite.ui.components.taskLabel(nextTask.reminder.type),
-                        style = MaterialTheme.typography.titleMedium,
+                        stringResource(R.string.ui_2ae8bf7c4f),
                         fontWeight = FontWeight.Bold,
-                        color = if (nextTask.status != TimelineStatus.PENDING) Coral else MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                    Text(
-                        stringResource(R.string.ui_e31ddfb300, petName, timeLabel),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                        style = MaterialTheme.typography.labelMedium,
                     )
                 }
             }
-            Button(
-                onClick = onMarkDone,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                shape = RoundedCornerShape(12.dp),
-                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
-            ) {
-                Text(stringResource(R.string.ui_2ae8bf7c4f), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+
+            if (stacked) {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    taskInfo(Modifier.fillMaxWidth())
+                    actionButton(Modifier.fillMaxWidth())
+                }
+            } else {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    taskInfo(Modifier.weight(1f))
+                    actionButton(Modifier)
+                }
             }
         }
     }
@@ -178,20 +159,36 @@ fun NextCareHeroCard(
 fun StreakBadge(days: Int) {
     val (emoji, label) = when {
         days >= 30 -> "⭐" to stringResource(R.string.ui_7881bf71d2)
-        days >= 7  -> "🔥" to stringResource(R.string.ui_b2de92cf43, days)
-        days >= 3  -> "🟢" to stringResource(R.string.ui_b2de92cf43, days)
-        else       -> "🐾" to stringResource(R.string.ui_adec391fc6, days, if (days > 1) "s" else "")
+        days >= 7 -> "🔥" to pluralStringResource(R.plurals.dash_streak_days, days, days)
+        days >= 3 -> "🟢" to pluralStringResource(R.plurals.dash_streak_days, days, days)
+        else -> "🐾" to pluralStringResource(R.plurals.dash_streak_days, days, days)
     }
+    // Gentle flame pulse for active streaks.
+    val pulse by rememberInfiniteTransition(label = "streak-pulse").animateFloat(
+        initialValue = 1f,
+        targetValue = 1.12f,
+        animationSpec = infiniteRepeatable(tween(durationMillis = 900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "streak-flame",
+    )
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .clip(RoundedCornerShape(14.dp))
             .background(Color.White.copy(alpha = 0.18f))
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
     ) {
-        Text(emoji, style = MaterialTheme.typography.titleLarge)
-        Text(label, style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold, color = Color.White)
+        Text(
+            emoji,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.scale(if (days >= 3) pulse else 1f),
+        )
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
+            maxLines = 1,
+        )
     }
 }
 
@@ -199,10 +196,10 @@ fun StreakBadge(days: Int) {
 @Composable
 fun StreakProgressCard(currentStreak: Int) {
     val (nextTarget, nextEmoji, nextLabel) = when {
-        currentStreak < 3  -> Triple(3,  "🟢", "3-day habit")
-        currentStreak < 7  -> Triple(7,  "🔥", "7-day streak")
-        currentStreak < 30 -> Triple(30, "⭐", "30-day champion")
-        else               -> Triple(currentStreak, "⭐", "Legendary!")
+        currentStreak < 3 -> Triple(3, "🟢", stringResource(R.string.dash_goal_habit))
+        currentStreak < 7 -> Triple(7, "🔥", stringResource(R.string.dash_goal_streak))
+        currentStreak < 30 -> Triple(30, "⭐", stringResource(R.string.dash_goal_champion))
+        else -> Triple(currentStreak, "⭐", stringResource(R.string.dash_goal_legendary))
     }
     val progress = if (nextTarget <= currentStreak) 1f
     else currentStreak.toFloat() / nextTarget.toFloat()
@@ -253,9 +250,14 @@ fun StreakProgressCard(currentStreak: Int) {
 @Composable
 fun TodaySummaryRow(totalDone: Int, totalPending: Int, maxStreak: Int) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        SummaryChip("✅", "Done",    "$totalDone",       Modifier.weight(1f))
-        SummaryChip("⏰", "Pending", "$totalPending",    Modifier.weight(1f))
-        SummaryChip("🔥", "Streak",  "$maxStreak days",  Modifier.weight(1f))
+        SummaryChip("✅", stringResource(R.string.dash_summary_done), "$totalDone", Modifier.weight(1f))
+        SummaryChip("⏰", stringResource(R.string.dash_summary_pending), "$totalPending", Modifier.weight(1f))
+        SummaryChip(
+            "🔥",
+            stringResource(R.string.dash_summary_streak),
+            pluralStringResource(R.plurals.dash_streak_days, maxStreak, maxStreak),
+            Modifier.weight(1f),
+        )
     }
 }
 

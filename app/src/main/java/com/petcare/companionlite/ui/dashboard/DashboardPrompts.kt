@@ -85,6 +85,7 @@ import com.petcare.companionlite.data.model.TimelineItem
 import com.petcare.companionlite.data.model.TimelineStatus
 import com.petcare.companionlite.monetization.BillingManager
 import com.petcare.companionlite.ui.components.AdBanner
+import com.petcare.companionlite.ui.components.bouncyPress
 import com.petcare.companionlite.ui.components.PetAvatar
 import com.petcare.companionlite.ui.components.PetCard
 import com.petcare.companionlite.ui.ai.AiPaywallSheet
@@ -100,11 +101,13 @@ import java.time.format.DateTimeFormatter
 
 @Composable
 fun AiCompanionHeroCard(petName: String, onOpenAi: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         shape = RoundedCornerShape(20.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().bouncyPress(interactionSource),
         onClick = onOpenAi,
+        interactionSource = interactionSource,
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(18.dp),
@@ -144,11 +147,13 @@ fun AiCompanionHeroCard(petName: String, onOpenAi: () -> Unit) {
 
 @Composable
 fun AiProUpgradeCard(onExplore: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
     Card(
         colors = CardDefaults.cardColors(containerColor = PremiumGold.copy(alpha = 0.16f)),
         shape = RoundedCornerShape(20.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().bouncyPress(interactionSource),
         onClick = onExplore,
+        interactionSource = interactionSource,
     ) {
         Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -310,7 +315,7 @@ fun WeeklyReportBanner(onOpenReport: () -> Unit, onDismiss: () -> Unit) {
                     }
                 }
                 IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
-                    Icon(androidx.compose.material.icons.Icons.Filled.Close, "Dismiss", tint = Color.White.copy(alpha = 0.6f))
+                    Icon(androidx.compose.material.icons.Icons.Filled.Close, stringResource(R.string.dash_cd_dismiss), tint = Color.White.copy(alpha = 0.6f))
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -335,11 +340,13 @@ fun StreakRiskBanner(petItem: PetDashboardItem, onOpenPet: () -> Unit) {
         label = "pulse"
     )
 
+    val interactionSource = remember { MutableInteractionSource() }
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().bouncyPress(interactionSource),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Coral.copy(alpha = 0.12f)),
-        onClick = onOpenPet
+        onClick = onOpenPet,
+        interactionSource = interactionSource,
     ) {
         Row(
             modifier = Modifier
@@ -348,7 +355,7 @@ fun StreakRiskBanner(petItem: PetDashboardItem, onOpenPet: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("⚠️", style = MaterialTheme.typography.headlineSmall)
+            Text("⚠️", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.scale(pulse))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     stringResource(R.string.ui_af240977b3, petItem.pet.name, petItem.streakDays),

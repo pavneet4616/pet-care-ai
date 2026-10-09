@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notif_channel_medication">Recordatorios de medicación</string>
+    <string name="notif_channel_medication_body">Dosis de medicación con sonido y vibración para no olvidarlas</string>
+    <string name="notif_title_medicine">💊 Hora del medicamento de %1$s</string>
+    <string name="notif_title_feed">🥣 Hora de la comida de %1$s</string>
+    <string name="notif_title_walk">🦮 Hora del paseo con %1$s</string>
+    <string name="notif_title_grooming">🛁 Hora del aseo de %1$s</string>
+    <string name="notif_body_reminder">Toque para abrir el registro de cuidados.</string>
+    <string name="notif_pet_fallback">su mascota</string>
+</resources>

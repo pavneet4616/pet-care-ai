@@ -1,102 +1,54 @@
 package com.petcare.companionlite.ui.dashboard
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.NotificationsActive
-import androidx.compose.material.icons.filled.Pets
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.filled.WorkspacePremium
-import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.SmartToy
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.petcare.companionlite.R
-import com.petcare.companionlite.data.model.MoodState
-import com.petcare.companionlite.data.model.PetDashboardItem
-import com.petcare.companionlite.data.model.PetType
 import com.petcare.companionlite.data.model.TaskType
-import com.petcare.companionlite.data.model.TimelineItem
-import com.petcare.companionlite.data.model.TimelineStatus
-import com.petcare.companionlite.monetization.BillingManager
-import com.petcare.companionlite.ui.components.AdBanner
-import com.petcare.companionlite.ui.components.PetAvatar
-import com.petcare.companionlite.ui.components.PetCard
 import com.petcare.companionlite.ui.ai.AiPaywallSheet
-import com.petcare.companionlite.ui.theme.Coral
-import com.petcare.companionlite.ui.theme.DeepSage
-import com.petcare.companionlite.ui.theme.Honey
-import com.petcare.companionlite.ui.theme.PremiumGold
+import com.petcare.companionlite.ui.components.AdBanner
+import com.petcare.companionlite.ui.components.BobbingEmoji
+import com.petcare.companionlite.ui.components.CelebrationOverlay
+import com.petcare.companionlite.ui.components.bouncyPress
+import com.petcare.companionlite.ui.components.popIn
 import com.petcare.companionlite.ui.theme.Sage
 import kotlinx.coroutines.delay
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import java.time.LocalTime
 
 @Composable
 fun DashboardScreen(
@@ -113,8 +65,8 @@ fun DashboardScreen(
     onBuyWeekly: () -> Unit = {},
     onBuyMonthly: () -> Unit = {},
     onRestorePurchases: () -> Unit = {},
-    weeklyPriceText: String = "$2.99",
-    monthlyPriceText: String = "$9.99",
+    weeklyPriceText: String = "",
+    monthlyPriceText: String = "",
     weeklyReady: Boolean = false,
     monthlyReady: Boolean = false,
     billingLoading: Boolean = false,
@@ -138,11 +90,8 @@ fun DashboardScreen(
             selectedPetId
         }
     }
-
-
-    val totalDone    = state.pets.sumOf { it.completedCount }
-    val totalPending = state.pets.sumOf { it.pendingCount + it.overdueCount }
-    val maxStreak    = state.pets.maxOfOrNull { it.streakDays } ?: 0
+    val activePetItem = state.pets.firstOrNull { it.pet.id == activePetId }
+    val maxStreak = state.pets.maxOfOrNull { it.streakDays } ?: 0
 
     LaunchedEffect(state.showCelebration) {
         if (state.showCelebration) {
@@ -151,32 +100,33 @@ fun DashboardScreen(
         }
     }
 
+    val greeting = when (LocalTime.now().hour) {
+        in 5..11 -> stringResource(R.string.greeting_morning)
+        in 12..16 -> stringResource(R.string.greeting_afternoon)
+        in 17..20 -> stringResource(R.string.greeting_evening)
+        else -> stringResource(R.string.greeting_night)
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 20.dp),
+            // The bottom padding keeps the last card clear of the global AI button.
+            contentPadding = PaddingValues(start = 16.dp, top = 20.dp, end = 16.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // ── 1. Header ─────────────────────────────────────────────
-            item {
+            // ── 1. Header: greeting with a bobbing paw; the settings button keeps its own space ──
+            item(key = "header") {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.fillMaxWidth().popIn(0),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    BobbingEmoji(emoji = "🐾", size = 40.dp)
                     Column(modifier = Modifier.weight(1f)) {
-                        val activePetItem = state.pets.firstOrNull { it.pet.id == activePetId }
-                        val hour = java.time.LocalTime.now().hour
-                        val greeting = when (hour) {
-                            in 5..11 -> stringResource(R.string.greeting_morning)
-                            in 12..16 -> stringResource(R.string.greeting_afternoon)
-                            in 17..20 -> stringResource(R.string.greeting_evening)
-                            else -> stringResource(R.string.greeting_night)
-                        }
                         Text(
-                            stringResource(R.string.ui_adfbf75c4f, greeting),
+                            greeting,
                             style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Black),
-                            color = MaterialTheme.colorScheme.onBackground
+                            color = MaterialTheme.colorScheme.onBackground,
                         )
                         val subtitle = when {
                             state.pets.size > 1 -> stringResource(R.string.ui_1cd0c04e4e)
@@ -186,7 +136,7 @@ fun DashboardScreen(
                         Text(
                             subtitle,
                             style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                         )
                     }
                     IconButton(
@@ -194,40 +144,47 @@ fun DashboardScreen(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
                     ) {
-                        Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.ui_c7f73bb54d), tint = MaterialTheme.colorScheme.primary)
+                        Icon(
+                            Icons.Filled.Settings,
+                            contentDescription = stringResource(R.string.ui_c7f73bb54d),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
                     }
                 }
             }
 
-            // ── 1.5 WEEKLY REPORT BAN─
+            // ── 1.5 Weekly report banner ──
             if (state.showReportBanner) {
-                item {
-                    WeeklyReportBanner(
-                        onOpenReport = onViewWeeklyReport,
-                        onDismiss = onDismissWeeklyReportBanner
-                    )
+                item(key = "report_banner") {
+                    Box(modifier = Modifier.fillMaxWidth().popIn(1)) {
+                        WeeklyReportBanner(
+                            onOpenReport = onViewWeeklyReport,
+                            onDismiss = onDismissWeeklyReportBanner,
+                        )
+                    }
                 }
             }
 
-            // ── 2. PET AVATAR ROW (horizontally scrollable switcher) ──
+            // ── 2. Pet switcher (only with several pets) ──
             if (state.pets.size > 1) {
-                item {
-                    PetAvatarRow(
-                        pets = state.pets,
-                        selectedPetId = activePetId,
-                        onPetSelect = onSelectPet,
-                        onPetDetailClick = onPetClick,
-                    )
+                item(key = "pet_switcher") {
+                    Box(modifier = Modifier.fillMaxWidth().popIn(1)) {
+                        PetAvatarRow(
+                            pets = state.pets,
+                            selectedPetId = activePetId,
+                            onPetSelect = onSelectPet,
+                            onPetDetailClick = onPetClick,
+                        )
+                    }
                 }
             }
 
-            // ── 3. FILTERED SINGLE PET SECTION ────────────────────────
-            if (activePetId != null) {
-                val activePetItem = state.pets.firstOrNull { it.pet.id == activePetId }
-                if (activePetItem != null) {
-                    item(key = activePetItem.pet.id) {
+            // ── 3. Active pet: hero, vitals, quick actions, next task, timeline, care kit ──
+            if (activePetItem != null) {
+                item(key = "pet_${activePetItem.pet.id}") {
+                    Box(modifier = Modifier.fillMaxWidth().popIn(2)) {
                         PetSection(
                             petItem = activePetItem,
                             onPetClick = { onPetClick(activePetItem.pet.id) },
@@ -238,98 +195,112 @@ fun DashboardScreen(
                     }
                 }
             } else {
-                // If there are absolutely no pets, show onboarding / landing state
-                item {
-                    FirstTimeLanding(onAddPet = onAddPet)
+                // No pets yet: onboarding / landing state
+                item(key = "first_time") {
+                    Box(modifier = Modifier.fillMaxWidth().popIn(2)) {
+                        FirstTimeLanding(onAddPet = onAddPet)
+                    }
                 }
             }
 
-            // ── 3.5 AI COMPANION HERO ───────────────────────────────
-            if (activePetId != null) {
-                val heroPet = state.pets.firstOrNull { it.pet.id == activePetId }
-                if (heroPet != null) {
-                    item(key = "ai_hero_${heroPet.pet.id}") {
+            // ── 3.1 Banner ad: right after the main timeline, framed, 16dp away from any button ──
+            if (!state.settings.hasNoAds) {
+                item(key = "dash_ad") {
+                    AdBanner(enabled = !state.settings.hasNoAds, framed = true)
+                }
+            }
+
+            // ── 3.5 AI companion ──
+            if (activePetItem != null) {
+                item(key = "ai_hero_${activePetItem.pet.id}") {
+                    Box(modifier = Modifier.fillMaxWidth().popIn(3)) {
                         AiCompanionHeroCard(
-                            petName = heroPet.pet.name,
-                            onOpenAi = { onOpenAi(heroPet.pet.id) },
+                            petName = activePetItem.pet.name,
+                            onOpenAi = { onOpenAi(activePetItem.pet.id) },
                         )
                     }
                 }
             }
 
-            // ── 4. GLOBAL STREAK PROGRESS ─────────────────────────────
-            if (maxStreak > 0 && activePetId != null) {
-                item { StreakProgressCard(maxStreak) }
-            }
-
-            // ── 4.5 STREAK RISK BANNER ────────────────────────────
-            state.pets.filter { it.streakAtRisk }.forEach { atRiskPet ->
-                item(key = "risk_${atRiskPet.pet.id}") {
-                    StreakRiskBanner(petItem = atRiskPet, onOpenPet = { onPetClick(atRiskPet.pet.id) })
+            // ── 4. Streak progress ──
+            if (maxStreak > 0 && activePetItem != null) {
+                item(key = "streak_progress") {
+                    Box(modifier = Modifier.fillMaxWidth().popIn(4)) {
+                        StreakProgressCard(maxStreak)
+                    }
                 }
             }
 
-            // ── 5. ADD ANOTHER PET ────────────────────────────────────
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                    onClick = onAddPet
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(18.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+            // ── 4.5 Streak risk banners ──
+            state.pets.filter { it.streakAtRisk }.forEach { atRiskPet ->
+                item(key = "risk_${atRiskPet.pet.id}") {
+                    Box(modifier = Modifier.fillMaxWidth().popIn(5)) {
+                        StreakRiskBanner(petItem = atRiskPet, onOpenPet = { onPetClick(atRiskPet.pet.id) })
+                    }
+                }
+            }
+
+            // ── 5. Add another pet ──
+            item(key = "add_pet") {
+                val addInteraction = remember { MutableInteractionSource() }
+                Box(modifier = Modifier.fillMaxWidth().popIn(6)) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth().bouncyPress(addInteraction),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        onClick = onAddPet,
+                        interactionSource = addInteraction,
                     ) {
-                        Box(
+                        Row(
                             modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(Sage.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
+                                .fillMaxWidth()
+                                .padding(18.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            Icon(
-                                Icons.Filled.Add,
-                                contentDescription = stringResource(R.string.ui_e9a3389f10),
-                                modifier = Modifier.size(24.dp),
-                                tint = Sage
-                            )
-                        }
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                stringResource(R.string.ui_4a60573885),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                stringResource(R.string.ui_eb783a1851),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(Sage.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Filled.Add,
+                                    contentDescription = stringResource(R.string.ui_e9a3389f10),
+                                    modifier = Modifier.size(24.dp),
+                                    tint = Sage,
+                                )
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    stringResource(R.string.ui_4a60573885),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    stringResource(R.string.ui_eb783a1851),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
+                            }
                         }
                     }
                 }
             }
 
-            // ── 6. AI PRO UPSELL ───────────────────────────────────────
-            item {
-                AnimatedVisibility(visible = !state.settings.hasFullAccess) {
-                    AiProUpgradeCard(onExplore = { showProPaywall = true })
+            // ── 6. AI Pro upsell ──
+            item(key = "pro_upsell") {
+                Box(modifier = Modifier.fillMaxWidth().popIn(7)) {
+                    AnimatedVisibility(visible = !state.settings.hasFullAccess) {
+                        AiProUpgradeCard(onExplore = { showProPaywall = true })
+                    }
                 }
             }
 
-            // ── 7. BANNER AD ──────────────────────────────────────────
-            item {
-                Spacer(Modifier.height(4.dp))
-                AdBanner(enabled = !state.settings.hasNoAds)
-            }
-
-            // ── FOOTER ────────────────────────────────────────────────
-            item {
+            // ── FOOTER ──
+            item(key = "footer") {
                 Text(
                     stringResource(R.string.not_vet_advice),
                     style = MaterialTheme.typography.bodySmall,
@@ -340,8 +311,8 @@ fun DashboardScreen(
             }
         }
 
-        // ── CELEBRATION OVERLAY ───────────────────────────────────────
-        com.petcare.companionlite.ui.components.CelebrationOverlay(
+        // ── CELEBRATION OVERLAY ──
+        CelebrationOverlay(
             visible = state.showCelebration,
             message = state.celebrationMessage,
             petName = state.celebrationPetName,
@@ -350,7 +321,7 @@ fun DashboardScreen(
             onDismiss = onConsumeCelebration,
         )
         if (showProPaywall) {
-            val petName = state.pets.firstOrNull { it.pet.id == activePetId }?.pet?.name ?: "your pet"
+            val petName = activePetItem?.pet?.name ?: stringResource(R.string.dash_pet_fallback)
             AiPaywallSheet(
                 quota = null,
                 petName = petName,
@@ -368,5 +339,3 @@ fun DashboardScreen(
         }
     }
 }
-
-// ── PET AVATAR ROW (horizontally scrollable switcher with premium selection states) ──

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dash_action_feed">Alimentar</string>
+    <string name="dash_action_water">Água</string>
+    <string name="dash_action_walk">Passeio</string>
+    <string name="dash_action_medicine">Remédio</string>
+    <string name="dash_action_grooming">Tosa</string>
+    <string name="dash_logged">Registrado ✓</string>
+
+    <string name="dash_status_no_routine">Sem rotina ainda – adicione uma</string>
+    <string name="dash_status_nothing_due">Nada para hoje 🎉</string>
+    <string name="dash_status_all_done">Tudo feito por hoje 🎉</string>
+    <plurals name="dash_status_to_go">
+        <item quantity="one">Falta %1$d</item>
+        <item quantity="other">Faltam %1$d</item>
+    </plurals>
+    <plurals name="dash_status_overdue">
+        <item quantity="one">%1$d atrasada</item>
+        <item quantity="other">%1$d atrasadas</item>
+    </plurals>
+
+    <string name="dash_hero_no_routine">Crie uma rotina diária para %1$s</string>
+    <string name="dash_hero_free_day">%1$s tem um dia tranquilo</string>
+    <string name="dash_hero_done">%1$s está em dia por hoje ❤️</string>
+
+    <string name="dash_next_format">Próximo: %1$s · %2$s</string>
+    <string name="dash_when_today">Hoje às %1$s</string>
+    <string name="dash_when_tomorrow">Amanhã às %1$s</string>
+    <string name="dash_when_weekday">%1$s %2$s</string>
+    <string name="dash_word_upcoming">Próximo</string>
+    <string name="dash_word_overdue">Atrasado</string>
+    <string name="dash_word_missed">Perdido</string>
+    <string name="dash_task_title">%1$s: %2$s</string>
+    <string name="dash_timeline_perfect">✨ Um dia perfeito para %1$s!</string>
+    <string name="dash_timeline_progress">%1$d de %2$d feitas, continue assim! 💚</string>
+    <string name="dash_empty_routine_body">Abra os detalhes de %1$s para criar um lembrete diário e começar uma sequência de cuidados.</string>
+
+    <string name="dash_done_of_total">%1$d de %2$d feitas</string>
+    <plurals name="dash_pending_count">
+        <item quantity="one">%1$d pendente</item>
+        <item quantity="other">%1$d pendentes</item>
+    </plurals>
+    <plurals name="dash_streak_days">
+        <item quantity="one">%1$d dia</item>
+        <item quantity="other">%1$d dias</item>
+    </plurals>
+    <plurals name="dash_streak_badge">
+        <item quantity="one">🔥 %1$d dia seguido</item>
+        <item quantity="other">🔥 %1$d dias seguidos</item>
+    </plurals>
+
+    <string name="dash_goal_habit">Hábito de 3 dias</string>
+    <string name="dash_goal_streak">Sequência de 7 dias</string>
+    <string name="dash_goal_champion">Campeão de 30 dias</string>
+    <string name="dash_goal_legendary">Lendário!</string>
+
+    <string name="dash_summary_done">Feitas</string>
+    <string name="dash_summary_pending">Pendentes</string>
+    <string name="dash_summary_streak">Sequência</string>
+
+    <string name="dash_pet_fallback">seu pet</string>
+    <string name="dash_pet_fallback_cap">Seu pet</string>
+    <string name="dash_cd_dismiss">Fechar</string>
+</resources>

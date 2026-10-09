@@ -2,6 +2,7 @@ package com.petcare.companionlite.data.ai
 
 import com.petcare.companionlite.core.inAppLanguage
 
+import com.petcare.companionlite.BuildConfig
 import com.petcare.companionlite.R
 
 import android.util.Log
@@ -41,6 +42,9 @@ class AiApi(
         .connectTimeout(20, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
         .writeTimeout(20, TimeUnit.SECONDS)
+        .addInterceptor { chain ->
+            chain.proceed(chain.request().newBuilder().header("x-app-version-code", BuildConfig.VERSION_CODE.toString()).build())
+        }
         .build(),
 ) {
     private suspend fun post(path: String, payload: JSONObject, attest: Boolean = true): Request {
@@ -144,7 +148,7 @@ class AiApi(
                     )
                     if (answer.summary.isEmpty()) {
                         return@withContext AiCallOutcome.Failure(
-                            "Empty reply. Your question was kept — tap Retry.",
+                            context.inAppLanguage().getString(R.string.ui_ab02c70c11),
                             "EMPTY_REPLY",
                         )
                     }
@@ -165,9 +169,10 @@ class AiApi(
             Log.w(TAG, "chat network failure: ${e.javaClass.simpleName}")
             val offline = e is java.net.UnknownHostException || e is java.net.ConnectException ||
                 e is java.net.SocketTimeoutException
+            // Never show the raw exception text to users; it is only logged by class name above.
             AiCallOutcome.Failure(
                 if (offline) context.inAppLanguage().getString(R.string.ui_9605446d6e)
-                else (e.message ?: context.inAppLanguage().getString(R.string.ui_fee216d567)),
+                else context.inAppLanguage().getString(R.string.ui_fee216d567),
                 if (offline) "OFFLINE" else "NETWORK",
             )
         }

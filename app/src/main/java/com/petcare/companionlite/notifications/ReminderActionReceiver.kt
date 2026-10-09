@@ -3,6 +3,7 @@ package com.petcare.companionlite.notifications
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import com.petcare.companionlite.PetCareApplication
 import kotlinx.coroutines.CoroutineScope
@@ -20,11 +21,19 @@ class ReminderActionReceiver : BroadcastReceiver() {
                 val app = (context.applicationContext as PetCareApplication).container
                 when (intent.action) {
                     ACTION_DONE -> app.repository.completeReminder(id, occurrence)
-                    ACTION_SNOOZE -> if (!app.repository.reminderCompleted(id, occurrence)) app.notificationScheduler.snooze(id, occurrence)
+                    ACTION_SNOOZE -> {
+                        if (!app.repository.reminderCompleted(id, occurrence)) {
+                            app.notificationScheduler.snooze(id, occurrence, app.repository.getReminder(id))
+                        }
+                    }
                     else -> return@launch
                 }
                 NotificationManagerCompat.from(context).cancel(id.toInt())
-            } finally { pending.finish() }
+            } catch (e: Exception) {
+                Log.e("ReminderActionReceiver", "Reminder action failed", e)
+            } finally {
+                pending.finish()
+            }
         }
     }
     companion object {

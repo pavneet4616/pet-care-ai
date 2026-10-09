@@ -2,9 +2,11 @@ package com.petcare.companionlite.ui.components
 
 import com.petcare.companionlite.R
 
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 
 import com.petcare.companionlite.core.petPhotoModel
+import com.petcare.companionlite.core.CareFormats
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.view.ViewGroup
 import androidx.compose.animation.core.RepeatMode
@@ -55,6 +57,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -142,9 +146,11 @@ fun PetCard(item: PetDashboardItem, onClick: () -> Unit) {
                 val progressParts = mutableListOf<String>()
                 if (item.completedCount > 0 || item.pendingCount > 0 || item.overdueCount > 0) {
                     val total = item.completedCount + item.pendingCount + item.overdueCount
-                    progressParts.add("${item.completedCount} of $total done")
+                    progressParts.add(stringResource(R.string.dash_done_of_total, item.completedCount, total))
                 }
-                if (item.streakDays > 0) progressParts.add("🔥 ${item.streakDays} day streak")
+                if (item.streakDays > 0) {
+                    progressParts.add(pluralStringResource(R.plurals.dash_streak_badge, item.streakDays, item.streakDays))
+                }
                 if (progressParts.isNotEmpty()) {
                     Text(
                         progressParts.joinToString(" · "),
@@ -167,7 +173,9 @@ fun PetCard(item: PetDashboardItem, onClick: () -> Unit) {
 
 @Composable
 fun PetPhotoOrAvatar(pet: PetProfile, mood: MoodState, modifier: Modifier = Modifier) {
-    if (pet.photoUri != null) {
+    // Photos picked in 1.1.0 can become unreadable after an update; fall back to the drawn avatar.
+    var photoFailed by remember(pet.photoUri) { mutableStateOf(false) }
+    if (pet.photoUri != null && !photoFailed) {
         AsyncImage(
             model = androidx.compose.ui.platform.LocalContext.current.petPhotoModel(pet.photoUri),
             contentDescription = stringResource(R.string.ui_4e1af604ac, pet.name),
@@ -175,6 +183,7 @@ fun PetPhotoOrAvatar(pet: PetProfile, mood: MoodState, modifier: Modifier = Modi
                 .clip(RoundedCornerShape(24.dp))
                 .background(Blush),
             contentScale = ContentScale.Crop,
+            onError = { photoFailed = true },
         )
     } else {
         PetAvatar(petType = pet.petType, mood = mood, modifier = modifier)
@@ -542,6 +551,7 @@ fun TimePickerDialogWrapper(
 
 @Composable
 fun TimelineCard(item: TimelineItem, onLogNow: () -> Unit) {
+    val context = LocalContext.current
     val statusColor = when (item.status) {
         TimelineStatus.COMPLETED -> Sage
         TimelineStatus.PENDING   -> Honey
@@ -555,7 +565,10 @@ fun TimelineCard(item: TimelineItem, onLogNow: () -> Unit) {
         TimelineStatus.MISSED    -> Icons.Filled.Warning
     }
     val statusLabel = when (item.status) {
-        TimelineStatus.COMPLETED -> stringResource(R.string.ui_17cd91a7ad, item.matchedActivity?.timestamp?.toTimeLabel().orEmpty())
+        TimelineStatus.COMPLETED -> stringResource(
+            R.string.ui_17cd91a7ad,
+            item.matchedActivity?.let { CareFormats.clockText(context, it.timestamp) }.orEmpty(),
+        )
         TimelineStatus.PENDING   -> stringResource(R.string.ui_c90341fee7)
         TimelineStatus.OVERDUE   -> stringResource(R.string.ui_0fa251c1f3)
         TimelineStatus.MISSED    -> stringResource(R.string.ui_62e50884f4)
@@ -584,7 +597,7 @@ fun TimelineCard(item: TimelineItem, onLogNow: () -> Unit) {
             }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
-                    stringResource(R.string.ui_53861d6315, com.petcare.companionlite.ui.components.taskLabel(item.reminder.type), item.scheduledAt.toTimeLabel()),
+                    stringResource(R.string.ui_53861d6315, com.petcare.companionlite.ui.components.taskLabel(item.reminder.type), CareFormats.clockText(context, item.scheduledAt)),
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -615,42 +628,56 @@ fun HealthLogCard(title: String, subtitle: String) {
     }
 }
 
+/**
+ * Anchored adaptive banner. Draws nothing when ads are disabled (paid users) or not allowed yet.
+ * [framed] wraps the banner in a subtle rounded container so it reads as an ad, not as content.
+ */
 @Composable
-fun AdBanner(enabled: Boolean) {
+fun AdBanner(enabled: Boolean, framed: Boolean = false) {
     val context = LocalContext.current
     val app = context.applicationContext as com.petcare.companionlite.PetCareApplication
     val adsAllowed by app.container.adsManager.adsAllowed.collectAsStateWithLifecycle()
     if (!enabled || !adsAllowed) return
 
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-    val bannerWidthDp = maxWidth.value.toInt().coerceAtLeast(1)
-    val adaptiveAdSize = remember(context, bannerWidthDp) {
-        AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, bannerWidthDp)
-    }
-    val adView = remember(context, adaptiveAdSize) {
-        AdView(context).apply {
-            adUnitId = AdsManager.bannerAdUnitId
-            setAdSize(adaptiveAdSize)
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            )
-            loadAd(AdRequest.Builder().build())
+    BoxWithConstraints(
+        modifier = if (framed) {
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                .padding(8.dp)
+        } else {
+            Modifier.fillMaxWidth()
+        },
+    ) {
+        val bannerWidthDp = maxWidth.value.toInt().coerceAtLeast(1)
+        val adaptiveAdSize = remember(context, bannerWidthDp) {
+            AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, bannerWidthDp)
         }
-    }
-
-    DisposableEffect(adView) {
-        onDispose {
-            adView.destroy()
+        val adView = remember(context, adaptiveAdSize) {
+            AdView(context).apply {
+                adUnitId = AdsManager.bannerAdUnitId
+                setAdSize(adaptiveAdSize)
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                )
+                loadAd(AdRequest.Builder().build())
+            }
         }
-    }
 
-    AndroidView(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 8.dp),
-        factory = { adView },
-    )
+        DisposableEffect(adView) {
+            onDispose {
+                adView.destroy()
+            }
+        }
+
+        AndroidView(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = if (framed) 0.dp else 8.dp),
+            factory = { adView },
+        )
     }
 }
 

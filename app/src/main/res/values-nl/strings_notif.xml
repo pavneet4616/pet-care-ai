@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notif_channel_medication">Medicijnherinneringen</string>
+    <string name="notif_channel_medication_body">Medicijndoses met geluid en trilling, zodat je ze niet vergeet</string>
+    <string name="notif_title_medicine">💊 Tijd voor het medicijn van %1$s</string>
+    <string name="notif_title_feed">🥣 Tijd om %1$s te voeren</string>
+    <string name="notif_title_walk">🦮 Tijd voor een wandeling met %1$s</string>
+    <string name="notif_title_grooming">🛁 Tijd voor de verzorging van %1$s</string>
+    <string name="notif_body_reminder">Tik om het zorglogboek te openen.</string>
+    <string name="notif_pet_fallback">je huisdier</string>
+</resources>

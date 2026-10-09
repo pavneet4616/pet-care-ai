@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="dash_action_feed">ごはん</string>
+    <string name="dash_action_water">お水</string>
+    <string name="dash_action_walk">散歩</string>
+    <string name="dash_action_medicine">投薬</string>
+    <string name="dash_action_grooming">お手入れ</string>
+    <string name="dash_logged">記録しました ✓</string>
+
+    <string name="dash_status_no_routine">まだ予定がありません – 追加しましょう</string>
+    <string name="dash_status_nothing_due">今日の予定はありません 🎉</string>
+    <string name="dash_status_all_done">今日の分はすべて完了 🎉</string>
+    <plurals name="dash_status_to_go">
+        <item quantity="one">あと%1$d件</item>
+        <item quantity="other">あと%1$d件</item>
+    </plurals>
+    <plurals name="dash_status_overdue">
+        <item quantity="one">期限切れ %1$d件</item>
+        <item quantity="other">期限切れ %1$d件</item>
+    </plurals>
+
+    <string name="dash_hero_no_routine">%1$sの毎日の予定を追加しましょう</string>
+    <string name="dash_hero_free_day">%1$sは今日は予定なし</string>
+    <string name="dash_hero_done">%1$sは今日のお世話がすべて完了 ❤️</string>
+
+    <string name="dash_next_format">次: %1$s · %2$s</string>
+    <string name="dash_when_today">今日 %1$s</string>
+    <string name="dash_when_tomorrow">明日 %1$s</string>
+    <string name="dash_when_weekday">%1$s %2$s</string>
+    <string name="dash_word_upcoming">予定</string>
+    <string name="dash_word_overdue">期限切れ</string>
+    <string name="dash_word_missed">未実施</string>
+    <string name="dash_task_title">%1$s: %2$s</string>
+    <string name="dash_timeline_perfect">✨ %1$sにとって完璧な一日！</string>
+    <string name="dash_timeline_progress">%1$d/%2$d 完了、この調子！ 💚</string>
+    <string name="dash_empty_routine_body">%1$sの詳細を開いて、毎日のリマインダーを設定し、お世話の連続記録を始めましょう。</string>
+
+    <string name="dash_done_of_total">%1$d/%2$d 完了</string>
+    <plurals name="dash_pending_count">
+        <item quantity="one">未完了 %1$d件</item>
+        <item quantity="other">未完了 %1$d件</item>
+    </plurals>
+    <plurals name="dash_streak_days">
+        <item quantity="one">%1$d日</item>
+        <item quantity="other">%1$d日</item>
+    </plurals>
+    <plurals name="dash_streak_badge">
+        <item quantity="one">🔥 %1$d日連続</item>
+        <item quantity="other">🔥 %1$d日連続</item>
+    </plurals>
+
+    <string name="dash_goal_habit">3日間の習慣</string>
+    <string name="dash_goal_streak">7日間の連続記録</string>
+    <string name="dash_goal_champion">30日間のチャンピオン</string>
+    <string name="dash_goal_legendary">伝説級！</string>
+
+    <string name="dash_summary_done">完了</string>
+    <string name="dash_summary_pending">未完了</string>
+    <string name="dash_summary_streak">連続</string>
+
+    <string name="dash_pet_fallback">ペット</string>
+    <string name="dash_pet_fallback_cap">ペット</string>
+    <string name="dash_cd_dismiss">閉じる</string>
+</resources>

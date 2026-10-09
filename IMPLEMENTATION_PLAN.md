@@ -72,12 +72,17 @@ Updated: 2026-10-08. Scope: fix the supplied code audit before growth and new fe
 - Android debug build passed. Lint reports 0 errors, 179 warnings and 2 hints, without a suppression/baseline. Warnings include unused resources, typography suggestions, older dependency checks and obsolete library lint detectors.
 - Localization validator: all seven target sets have 619 translatable resource names with complete coverage and matching placeholders.
 - Credential scan passed across tracked and eligible untracked files; signing key, passwords and service-account JSON are absent from Git.
-- Final-source release build (2026-10-09): the full command below finished with BUILD SUCCESSFUL. That run covered unit tests (31 passed, 0 failed), lint (0 errors, 179 warnings, 2 hints), the debug build, R8 release, the APK and the AAB. No app source changed during the run. Earlier attempts failed because the Gradle heap ran out (3 GB stalled in `lintVitalRelease`, and a byte-order mark in `gradle.properties` silently dropped the setting). `org.gradle.jvmargs` is now `-Xmx6g`, saved without a byte-order mark.
-- Final artifacts, versionCode 11 / versionName 1.1.1, minSdk 26, targetSdk 36:
-  - `app/build/outputs/apk/release/app-release.apk`: SHA-256 `38FA4C8A7BC5281BB8B80DE8AB059FEC935EC6C7AA9A96FF11229C8844059D8E`. apksigner verifies it with a v2 signature and one signer. `zipalign -c -P 16` passes, so it is 16 KB page aligned.
-  - `app/build/outputs/bundle/release/app-release.aab`: SHA-256 `115E66A8C0C0323464BA404FB43FDE77E997A9D798D14EEC99EFC7B2D01CC4AB`. `jarsigner -verify` reports "jar verified".
-  - Both are signed with the upload certificate, SHA-256 `E3:64:84:C5:F9:D1:77:24:25:0A:22:3A:D0:69:90:54:F1:9F:E1:D1:A8:E3:DA:AF:60:6C:2F:40:09:6F:FE:EF`. The Worker's `PLAY_SIGNING_DIGESTS` is the Play App Signing certificate (`AD:19:25:B7…`), which is the correct identity for Play-distributed installs. A sideloaded release APK therefore fails Integrity.
-  - The earlier artifacts (`D797EA32…` and `7A5FCDAF…`) are superseded and must not be uploaded.
+- Device test round (2026-10-09, OPPO CPH2065, Android 12): release and debug builds were tested on a phone, including a 1.1.0 to 1.1.1 in-place upgrade (Room 5 to 6, data, chats and reminders preserved). It found 39 issues, recorded in the session issue list and fixed in this build. The most important:
+  - R8 full mode removed WorkManager's `OverwritingInputMerger` constructor, so every WorkManager job failed in release: non-medicine reminders, weekly report, AI follow-up and the server data-deletion retry. Fixed by a keep rule in `app/proguard-rules.pro` and verified on device ("Worker result SUCCESS").
+  - Onboarding's reminder step hid its buttons behind the bottom bar on 800dp-tall phones, and the bottom bar was shown during onboarding.
+  - ColorOS widened exact medicine alarms by up to 1 hour. Medicine reminders now use `setAlarmClock` and a high-importance channel.
+  - Photos picked in 1.1.0 became unreadable after the update. The app now imports them where possible and otherwise shows a fallback avatar.
+  - Other fixes: brand name was "PetCare" in UI strings and translated in launcher names; about 50 mistranslations; 12/24h time display regression; hard-coded English and prices; the rewarded ad never retried; notifications on Android 8-12 were assumed enabled; PendingIntent collisions; the weekly report hour was overwritten. The UI/UX was refreshed (theme, animations, AI chat, paywall, dashboard).
+- Final-source release build (2026-10-09, after the fixes): unit tests (31 passed), lint (0 errors, 270 warnings, 2 hints), R8 release, APK and AAB.
+  - `app/build/outputs/bundle/release/app-release.aab`: SHA-256 `93FF0D0A965512730D924214AFFB1A6AD9ECC94BAF86EBE8DE75670CECA0351B`. `jarsigner -verify` reports "jar verified".
+  - `app/build/outputs/apk/release/app-release.apk`: SHA-256 `99AE054F2C3C0C33D5BA0ADFC32A803D08273327F5ACE1AD3BD50A68C5FF7174`. apksigner verifies it, and it is 16 KB aligned.
+  - versionCode 11 / versionName 1.1.1, upload certificate `E3:64:84:C5:…:FE:EF`. All earlier artifacts are superseded.
+  - Gradle cache: drive E: (`E:\GradleHome`) returned I/O device errors (Windows disk event 51). Builds now use `%USERPROFILE%\.gradle`. Check drive E:.
 
 Commands:
 

@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.util.Log
+import androidx.core.app.NotificationManagerCompat
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -31,7 +32,7 @@ class NotificationScheduler(private val context: Context) {
         val delay = (nextTrigger - now).coerceAtLeast(0)
         if (reminder.type == TaskType.MEDICINE) {
             workManager.cancelUniqueWork(uniqueName(reminder.id))
-            scheduleAlarm(reminder.id, nextTrigger, nextTrigger, snooze = false)
+            scheduleAlarm(reminder.id, nextTrigger, nextTrigger, snooze = false, reminder = reminder)
             return
         }
         try {
@@ -57,11 +58,12 @@ class NotificationScheduler(private val context: Context) {
         listOf(false, true).forEach { snooze ->
             alarms.cancel(alarmIntent(reminderId, 0, snooze))
         }
-        androidx.core.app.NotificationManagerCompat.from(context).cancel(reminderId.toInt())
+        NotificationManagerCompat.from(context).cancel(reminderId.toInt())
     }
 
-    fun snooze(reminderId: Long, scheduledAt: Long) =
-        scheduleAlarm(reminderId, System.currentTimeMillis() + 10 * 60 * 1000, scheduledAt, true)
+    /** Snoozes for 10 minutes. Pass the reminder so a medicine snooze keeps the medicine treatment. */
+    fun snooze(reminderId: Long, scheduledAt: Long, reminder: Reminder? = null) =
+        scheduleAlarm(reminderId, System.currentTimeMillis() + 10 * 60 * 1000, scheduledAt, true, reminder)
 
     private fun alarmIntent(id: Long, scheduledAt: Long, snooze: Boolean): PendingIntent {
         val intent = Intent(context, ReminderAlarmReceiver::class.java).apply {
@@ -73,11 +75,24 @@ class NotificationScheduler(private val context: Context) {
         return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
 
-    private fun scheduleAlarm(id: Long, triggerAt: Long, scheduledAt: Long, snooze: Boolean) {
+    /** Tapping the alarm icon in the status bar opens the app on the reminder's pet. */
+    private fun alarmShowIntent(reminder: Reminder): PendingIntent =
+        NotificationSupport.openAppIntent(context, reminder.id.toInt(), Uri.parse("petcare://open/alarm/${reminder.id}")) {
+            putExtra("selected_pet_id", reminder.petId)
+        }
+
+    private fun scheduleAlarm(id: Long, triggerAt: Long, scheduledAt: Long, snooze: Boolean, reminder: Reminder?) {
         val pending = alarmIntent(id, scheduledAt, snooze)
         try {
-            if (exactAlarmsAllowed()) alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
-            else alarms.setWindow(AlarmManager.RTC_WAKEUP, triggerAt, 10 * 60 * 1000, pending)
+            when {
+                // Alarm-clock alarms fire on time; OEM battery managers (ColorOS) widen exact-alarm windows.
+                reminder != null && reminder.type == TaskType.MEDICINE && exactAlarmsAllowed() -> alarms.setAlarmClock(
+                    AlarmManager.AlarmClockInfo(triggerAt, alarmShowIntent(reminder)),
+                    pending,
+                )
+                exactAlarmsAllowed() -> alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pending)
+                else -> alarms.setWindow(AlarmManager.RTC_WAKEUP, triggerAt, 10 * 60 * 1000, pending)
+            }
         } catch (_: SecurityException) {
             // Permission may change between checking and scheduling. Never crash or silently drop it.
             alarms.setWindow(AlarmManager.RTC_WAKEUP, triggerAt, 10 * 60 * 1000, pending)

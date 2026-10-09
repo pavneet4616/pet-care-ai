@@ -9,11 +9,24 @@ import com.petcare.companionlite.core.CareFormats
 import com.petcare.companionlite.data.model.PetProfile
 import com.petcare.companionlite.data.model.PetType
 import com.petcare.companionlite.data.model.HealthCategory
+import com.petcare.companionlite.core.actionLabelResource
 import com.petcare.companionlite.core.labelResource
 import com.petcare.companionlite.data.model.TaskType
 
 val LocalWeightUnit=compositionLocalOf { "kg" }
-@Composable fun taskLabel(type: TaskType): String = stringResource(type.labelResource())
+
+/** Short, capitalized action label for buttons, chips and titles: "Feed", "Walk", "Medicine". */
+@Composable fun taskActionLabel(type: TaskType): String = stringResource(type.actionLabelResource())
+
+/** Sentence fragment for running text only (e.g. "feeding", "a walk"). Never use it as a label. */
+@Composable fun taskPhrase(type: TaskType): String = stringResource(type.labelResource())
+
+/**
+ * Kept for existing callers, which all use the result as a label (chips, timeline rows, stats, pet detail).
+ * Returns the short action label; sentences must use [taskPhrase] instead.
+ */
+@Composable fun taskLabel(type: TaskType): String = taskActionLabel(type)
+
 @Composable fun petTypeLabel(type: PetType): String = stringResource(when(type) {
     PetType.DOG -> R.string.pet_dog
     PetType.CAT -> R.string.pet_cat
